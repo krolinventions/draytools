@@ -184,7 +184,7 @@ class draytools:
 if __name__=='__main__':
 	import optparse
 
-	usage = "usage: %prog [options] file"
+	usage = """usage: %prog [options] file\nDrayTek V2xxx config file and firmware decryption/decompression tools"""
 
 	parser = optparse.OptionParser(usage=usage,version="%prog v0.2")
 
@@ -199,7 +199,7 @@ if __name__=='__main__':
 
 	parser.add_option('-t', '--test',
 		action="store_true", dest="test",
-		help="Do not write anything, only try to parse files", default=False)
+		help="Test mode, do not write anything to disk, only try to parse files", default=False)
 
 	parser.add_option('-v', '--verbose',
 		action="store_true", dest="verbose",
@@ -235,9 +235,9 @@ if __name__=='__main__':
 		action="store_true", dest="fs",
 		help="Extract filesystem", default=False)
 
-	fwgroup.add_option('--out-dir',
+	fwgroup.add_option('-O', '--out-dir',
 		action="store", dest="outdir",
-		help="Output directory for filesystem contents", default="fs_out")
+		help="Output directory for filesystem contents, \"fs_out\" by default", default="fs_out")
 
 
 	parser.add_option_group(cfggroup)

@@ -125,12 +125,61 @@ Firmware operations tested on:
 2. Installation and usage
 ------------------------------------------------------------------------------
 ------------------------------------------------------------------------------
-2.1. Get Python (2.5 or newer)
+2.1. Get Python (2.5 or newer) at http://www.python.org/getit/
 2.2. Execute
 
 # python draytools.py --help
 
+Usage: draytools.py [options] file
+DrayTek V2xxx config file and firmware decryption/decompression tools
+
+Options:
+  --version             show program's version number and exit
+  -h, --help            show this help message and exit
+  -o OUTFILE, --output=OUTFILE
+                        Output file name, %INPUTFILE%.out if omitted
+  -t, --test            Test mode, do not write anything to disk, only try to
+                        parse files
+  -v, --verbose         Verbose output
+
+  Config file (*.cfg) options:
+    To be used on config files only
+
+    -c, --config        Decrypt and decompress config
+    -d, --decompress    Decompress an unenrypted config file
+    -y, --decrypt       Decrypt config file
+    -p, --password      Retrieve admin login and password from config file
+
+  Firmware file (*.all, *.rst, *.bin) options:
+    To be used on firmware files only
+
+    -f, --firmware      Decompress firmware
+    -F, --firmware-all  Decompress firmware and extract filesystem
+    -s, --fs            Extract filesystem
+    -O OUTDIR, --out-dir=OUTDIR
+                        Output directory for filesystem contents, "fs_out" by
+                        default
+
+
 and have fun.
+
+E.g. to print login&password from the config file:
+
+# python draytools.py -p config.cfg
+
+To decrypt & decompress the config file:
+
+# python draytools.py -c config.cfg
+
+"config.cfg.out" will be produced
+
+To extract firmware and filesystem contents
+
+# python draytools.py -F firmware.all
+
+Firmware will be written to "firmware.all.out"
+Filesystem will be extracted to "fs_out" folder.
+
 2.3. Or even use draytools.py & pydelzo.py in your projects (GPL v3).
 
 ------------------------------------------------------------------------------
