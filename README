@@ -76,7 +76,7 @@ In short, how the config file is compressed and encrypted:
 
 Config file:
     1) take raw slice of memory of about 300 K
-    2) compress with lzo 1.08
+    2) compress with LZO (v 1.08, lzo_1x )
     3) take router model number, with leading uppercase "V", e.g. "V2710" 
        and compute 1-byte sum of its raw bytes. It will be the key
     4) pseudocode for encryption
@@ -91,8 +91,8 @@ To uncompress, simply reverse the operations.
 
 
 Firmware:
-	1) compress
-	2) add 0x100-byte header with magic signature
+	1) compress with LZO (v 1.08, lzo_1x )
+	2) add 0x100-byte header, loader code and magic signature
 	3) add compressed FS image to the end
 ------------------------------------------------------------------------------
 1.2. Features.
@@ -201,6 +201,6 @@ visit https://github.com/ammonium/draytools/issues or email me.
 ------------------------------------------------------------------------------
 4.1. Further research of config file format
 4.2. Further research of firmware file format
-4.3. Try building custom firmware
+4.3. Try building custom firmware :)
 ------------------------------------------------------------------------------
 ------------------------------------------------------------------------------
