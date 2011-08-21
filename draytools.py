@@ -2,6 +2,8 @@
 #
 # DrayTek V2xxx config file and firmware decryption/decompression tools
 #
+# https://github.com/ammonium/draytools/
+#
 # draytools Copyright (C) AMMOnium <ammonium at mail dot ru>
 # 
 #   This program is free software: you can redistribute it and/or modify
