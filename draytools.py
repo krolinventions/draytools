@@ -88,6 +88,25 @@ class draytools:
 			return numfiles
 
 	@staticmethod
+	def v2k_checksum(data):
+		pos = 0
+		v0 = 0
+		a0 = 0
+		a1 = (len(data)-4)>>2;
+		a2 = 0;
+
+		while a1 > 0:
+			v0 = unpack(">L",data[pos+a0:pos+a0+4])[0]
+			a0 += 4        
+			a2 += v0
+			a1 -= 1
+
+		v0 = unpack(">L",data[pos+a0:pos+a0+4])[0]
+		a2 = ~a2        
+		v0 ^= a2
+		return v0 & 0xFFFFFFFF
+
+	@staticmethod
 	def decompress_cfg(data):
 		modelid = data[0x0C:0x0E]
 		rawcfgsize = 0x00100000
@@ -288,6 +307,9 @@ if __name__=='__main__':
 			                                   
 	elif options.decompress:
 		outdata = draytools.decompress_cfg(indata)
+		cksum = draytools.v2k_checksum(indata)
+		if options.verbose:
+			print 'V2kCheckSum = %08X ' % cksum + ((cksum == 0) and 'OK' or 'FAIL')
 		ol = len(outdata)
 		if not options.test:
 			outfile = file(outfname, 'wb')
