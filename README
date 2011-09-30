@@ -121,8 +121,9 @@ Firmware operations tested on:
   2910
   2920
   2930
-  2950    	
+  2950
   2955
+  3200
 
 ------------------------------------------------------------------------------
 ------------------------------------------------------------------------------
@@ -202,5 +203,6 @@ visit https://github.com/ammonium/draytools/issues or email me.
 4.1. Further research of config file format
 4.2. Further research of firmware file format
 4.3. Try building custom firmware :)
+4.4. Master password generator (done, coming soon)
 ------------------------------------------------------------------------------
 ------------------------------------------------------------------------------
