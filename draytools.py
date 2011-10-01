@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 #
-# DrayTek V2xxx config file and firmware decryption/decompression tools
+# DrayTek Vigor password recovery, config & firmware tools
 #
 # https://github.com/ammonium/draytools/
 #
-# draytools Copyright (C) AMMOnium <ammonium at mail dot ru>
+# draytools Copyright (C) 2011 AMMOnium <ammonium at mail dot ru>
 # 
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -16,18 +16,30 @@
 #   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #   GNU General Public License for more details.
 #
+#
 
 import sys
 import os
-from pydelzo import pydelzo, LZO_ERROR
+import re
+
 from struct import pack, unpack
+from binascii import hexlify, unhexlify
+
+from pydelzo import pydelzo, LZO_ERROR
+
 
 class draytools:
+	"""DrayTek Vigor password recovery, config & firmware tools"""
+	__version__ = "v0.3"
+	copyright = \
+	"draytools Copyright (C) 2011 AMMOnium <ammonium at mail dot ru>"
+	
 	CFG_RAW = 0
 	CFG_LZO = 1
 	CFG_ENC = 2
 
 	class fs:
+		"""Draytek filesystem utilities"""
 		def __init__(self, data, test=False, echo=False):
 			self.cdata = data			
 			self.test = test
@@ -35,15 +47,20 @@ class draytools:
 
 		def get_fname(self,i):
 			addr = 0x10+i*44
-			return str(self.cdata[ addr : addr + 0x20 ].strip('\x00'))
+			return str(self.cdata[addr : addr+0x20].strip('\x00'))
+
+		def get_hash(self,i):
+			addr = 0x10+i*44 + 0x20
+			return unpack("<L", str(self.cdata[addr : addr+4]))[0]
 
 		def get_offset(self,i):
 			addr = 0x10+i*44 + 0x24
-			return unpack("<L", str(self.cdata[ addr : addr + 4 ]))[0] + self.datastart
+			return unpack("<L", str(self.cdata[addr : addr+4]))[0] \
+				+ self.datastart
 
 		def get_fsize(self,i):	
 			addr = 0x10+i*44 + 0x28
-			return unpack("<L", str(self.cdata[ addr : addr + 4 ]))[0]
+			return unpack("<L", str(self.cdata[addr : addr+4]))[0]
 
 		def save_file(self,i):
 			fname = self.get_fname(i)
@@ -61,13 +78,18 @@ class draytools:
 			if not self.test:
 				ff = file(nfname,'wb')
 			if fs>0:	
-				if pp[-1].split('.')[-1].lower() in ['gif','jpg','cgi','cab','txt','jar']:
+				if pp[-1].split('.')[-1].lower() \
+				in ['gif','jpg','cgi','cab','txt','jar']:
 					rawfdata = fdata
 				else:
 					try:
-						rawfdata = pydelzo.decompress('\xF0'+pack(">L",fs*64)+fdata)
-					except LZO_ERROR as lze:						
-						print '[ERR]:\tFile "'+ fname + '" is damaged or uncompressed [' + str(lze) + '], RAW DATA WRITTEN'
+						rawfdata = pydelzo.decompress('\xF0' \
+							+ pack(">L",fs*64)+fdata)
+					except LZO_ERROR as lze:
+						print '[ERR]:\tFile "'+ fname \
+							+ '" is damaged or uncompressed [' \
+							+ str(lze) \
+							+ '], RAW DATA WRITTEN'
 						rawfdata = fdata
 			else:
 				rawfdata = ''
@@ -76,33 +98,40 @@ class draytools:
 				ff.write(rawfdata)
 				ff.close()
 			if self.echo:
-				print '%08X' % ds + '\t' + fname + '\t' + '%08X'%fs + '\t' + '%08X'%rawfs
+				print '%08X ' % ds + fname + ' %08X' % fs \
+					+ ' %08X' % rawfs
 			return (fs, rawfs)
 
 		def save_all(self, path):
 			self.path = path
-			numfiles = unpack("<H",str(self.cdata[0x0E:0x10]))[0]
+			numfiles = unpack("<H", str(self.cdata[0x0E:0x10]))[0]
 			self.datastart = 0x10 + 44 * numfiles	
 			for i in xrange(numfiles):
 				fs,rawfs = self.save_file(i)
 			return numfiles
 
+
 	@staticmethod
 	def v2k_checksum(data):
+		a1 = (len(data) - 4) >> 2
+		if len(data) < 4:
+			return 0xFFFFFFFF
+		if len(data) % 4:
+			data += '\x00' * (4 - len(data) % 4)
+
 		pos = 0
 		v0 = 0
 		a0 = 0
-		a1 = (len(data)-4)>>2;
-		a2 = 0;
+		a2 = 0
 
 		while a1 > 0:
-			v0 = unpack(">L",data[pos+a0:pos+a0+4])[0]
-			a0 += 4        
+			v0 = unpack(">L", data[pos+a0:pos+a0+4])[0]
+			a0 += 4
 			a2 += v0
 			a1 -= 1
 
 		v0 = unpack(">L",data[pos+a0:pos+a0+4])[0]
-		a2 = ~a2        
+		a2 = ~a2
 		v0 ^= a2
 		return v0 & 0xFFFFFFFF
 
@@ -111,7 +140,9 @@ class draytools:
 		modelid = data[0x0C:0x0E]
 		rawcfgsize = 0x00100000
 		lzocfgsize = unpack(">L", data[0x24:0x28])[0]
-		raw = data[:0x100]+pydelzo.decompress('\xF0' + pack(">L",rawcfgsize) + data[0x100:0x100+lzocfgsize])
+		raw = data[:0x100] \
+			+ pydelzo.decompress('\xF0' + pack(">L",rawcfgsize) \
+			+ data[0x100:0x100+lzocfgsize])
 		return raw
 
 	@staticmethod
@@ -145,7 +176,7 @@ class draytools:
 
 	@staticmethod
 	def decrypt_cfg(data):
-		modelstr = "V" + format(unpack(">H",data[0x0C:0x0E])[0],"04X")
+		modelstr = "V" + format(unpack(">H", data[0x0C:0x0E])[0],"04X")
 		ckey = draytools.make_key(modelstr)
 		return data[:0x100] + draytools.decrypt(data[0x100:], ckey)
 
@@ -184,7 +215,9 @@ class draytools:
 			lzosizestart = sigstart + 6
 			lzostart = lzosizestart + 4
 			lzosize = unpack('>L', data[lzosizestart:lzostart])[0]
-			return data[0x100:sigstart+2]+pydelzo.decompress('\xF0' + pack(">L",0x1000000)+data[lzostart:lzostart+lzosize])
+			return data[0x100:sigstart+2] \
+				+ pydelzo.decompress('\xF0' + pack(">L",0x1000000) \
+					+ data[lzostart:lzostart+lzosize])
 		else:
 			print '[ERR]:\tCompressed FW signature not found!'
 			return ''
@@ -193,34 +226,134 @@ class draytools:
 	def decompress_fs(data, path, test = False, echo = False):
 		lzofsdatalen = unpack('>L', data[4:8])[0]
 		fsdatalen = 0x800000
-		fs_raw = pydelzo.decompress('\xF0'+pack(">L",fsdatalen) + data[0x08:0x08+lzofsdatalen])
-		cfs = draytools.fs(fs_raw,test,echo)
+		fs_raw = pydelzo.decompress('\xF0' + pack(">L", fsdatalen) \
+			 + data[0x08:0x08 + lzofsdatalen])
+		cfs = draytools.fs(fs_raw, test, echo)
 		return (lzofsdatalen, cfs.save_all(path))
 	
 	@staticmethod
 	def decompress_fs_only(data, path, test = False, echo = False):
 		fsstart = unpack('>L', data[:4])[0]
-		return draytools.decompress_fs(data[fsstart:],path,test,echo)
+		return draytools.decompress_fs(data[fsstart:], path, test, echo)
+
+	@staticmethod
+	def spkeygen(mac):
+		atu = 'WAHOBXEZCLPDYTFQMJRVINSUGK'
+		atl = 'kgusnivrjmqftydplczexbohaw'
+		res = ['\x00'] * 8
+		st = [0] * 8
+
+		a3 = 0
+		for i in mac:
+			a3 *= 31
+			a3 += ord(i)
+		a3 &= 0xFFFFFFFF
+		ck = 0x4EC4EC4F * a3
+
+		v1 = (ck & 0xFFFFFFFF00000000) >> 32
+
+		v1 >>= 3
+		v0 = v1 << 1
+		v0 &= 0xFFFFFFFF
+		v0 += v1
+		v0 <<= 2
+		v0 &= 0xFFFFFFFF
+		v0 += v1
+		v0 <<= 1
+		v0 -= a3
+	#	v0 &= 0xFFFFFFFF
+		st[0] = a3
+		res[0] = atu[abs(v0)]
+		
+		for i in xrange(1,8):
+			v1 = st[i-1]
+			a0 = ord(res[0])
+			t0 = ord(res[1])
+			v0 = (v1 << 5) & 0xFFFFFFFF
+			a1 = ord(res[2])
+			v0 -= v1
+			v0 += a0
+			a2 = ord(res[3])
+			a3 = ord(res[4])
+			v0 += t0
+			v0 += a1
+			t0 = ord(res[5])
+			v1 = ord(res[6])
+			v0 += a2
+			a0 = ord(res[7])
+			v0 += a3
+			v0 += t0
+			v0 += v1
+			v0 &= 0xFFFFFFFF
+			a3 = v0 + a0
+			i1 = a3 * 0x4EC4EC4F
+			a0 = i & 1
+			st[i] = a3
+			v1 = (i1 & 0xFFFFFFFF00000000) >> 32
+			v1 >>= 3
+			v0 = v1 << 1
+			v0 += v1
+			v0 <<= 2
+			v0 += v1
+			v0 <<= 1
+			v0 = a3 - v0
+			a1 += v0
+			v0 &= 0xFFFFFFFF
+			if a0 == 0:
+				v1 = atu[abs(v0)]
+			else:
+				v1 = atl[abs(v0)]
+			res[i] = v1
+			v0 = 0
+		return ''.join(res)
+		
+
 
 if __name__=='__main__':
 	import optparse
 
-	usage = """usage: %prog [options] file\nDrayTek V2xxx config file and firmware decryption/decompression tools"""
+	usage = \
+"""usage: %prog [options] file
+DrayTek V2xxx config file and firmware decryption/decompression tools"""
 
-	parser = optparse.OptionParser(usage=usage,version="%prog v0.2")
+	optparse.OptionParser.format_epilog = lambda self, formatter: self.epilog
+	parser = optparse.OptionParser(usage=usage, \
+		version="%prog "+draytools.__version__, \
+		epilog=
+"""
+Examples:
 
-	cfggroup = optparse.OptionGroup(parser, "Config file (*.cfg) options",
-                    "To be used on config files only")
-	fwgroup = optparse.OptionGroup(parser, "Firmware file (*.all, *.rst, *.bin) options",
-                    "To be used on firmware files only")
+To print login&password from the config file:
+# python draytools.py -p config.cfg
+	Login and password will be displayed
+
+To decrypt & decompress the config file:
+# python draytools.py -c config.cfg
+	Raw config file "config.cfg.out" will be produced
+
+To extract firmware and filesystem contents
+# python draytools.py -F firmware.all
+	Uncompressed firmware will be written to file "firmware.all.out"
+	Filesystem will be extracted to "fs_out" folder.
+""")
+
+	cfggroup = optparse.OptionGroup(parser, "Config file (*.cfg) commands",
+		"To be used on config files only")
+	fwgroup = optparse.OptionGroup(parser, \
+		"Firmware file (*.all, *.rst, *.bin) commands",
+		"To be used on firmware files only")
+	
+	mgroup = optparse.OptionGroup(parser, "Miscellaneous commands",
+		"Some other useful stuff")
 
 	parser.add_option('-o', '--output',
 		action="store", dest="outfile",
 		help="Output file name, %INPUTFILE%.out if omitted", default="")
 
 	parser.add_option('-t', '--test',
-		action="store_true", dest="test",
-		help="Test mode, do not write anything to disk, only try to parse files", default=False)
+		action="store_true", dest="test", help=
+"""Test mode, do not write anything to disk, only try to parse files""",
+		default=False)
 
 	parser.add_option('-v', '--verbose',
 		action="store_true", dest="verbose",
@@ -241,7 +374,8 @@ if __name__=='__main__':
 
 	cfggroup.add_option('-p', '--password',
 		action="store_true", dest="password",
-		help="Retrieve admin login and password from config file", default=False)
+		help="Retrieve admin login and password from config file", 
+		default=False)
 
 
 	fwgroup.add_option('-f', '--firmware',
@@ -258,30 +392,43 @@ if __name__=='__main__':
 
 	fwgroup.add_option('-O', '--out-dir',
 		action="store", dest="outdir",
-		help="Output directory for filesystem contents, \"fs_out\" by default", default="fs_out")
+		help=
+		"Output directory for filesystem contents, \"fs_out\" by default", 
+		default="fs_out")
+
+	mgroup.add_option('-m', '--master-key',
+		action="store", dest="mac",
+		help="Generate FTP master key for given router MAC address", 
+		default=None)
 
 
 	parser.add_option_group(cfggroup)
 	parser.add_option_group(fwgroup)
+	parser.add_option_group(mgroup)
 
 	
-	options, args = parser.parse_args()				
+	options, args = parser.parse_args()
+
+	outfname = options.outfile is not None and options.outfile \
+		or (len(args) > 0 and args[0]+'.out' or 'file.out')
+	outdir = options.outdir
 
 	infile = None
 	data = None
+	indata = None
 
 	if len(args) > 1:
-		print 'Too much arguments, only input file name expected'
+		print '[ERR]:\tToo much arguments, only input file name expected'
+		print 'Run "draytools --help"'
 		sys.exit(1)
-	elif len(args) < 1:
-		print 'Input file name expected'
+	elif len(args) < 1 and not options.mac:
+		print '[ERR]:\tInput file name expected'
+		print 'Run "draytools --help"'
 		sys.exit(1)
 
-	infile = file(args[0],'rb')
-	indata = infile.read()
-
-	outfname = options.outfile is not None and options.outfile or args[0]+'.out'
-	outdir = options.outdir
+	if not options.mac:
+		infile = file(args[0],'rb')
+		indata = infile.read()
 
 	if options.config:
 		outdata = draytools.de_cfg(indata)
@@ -289,40 +436,50 @@ if __name__=='__main__':
 		if not options.test:
 			outfile = file(outfname, 'wb')
 			outfile.write(outdata)
-			print outfname + ' written, %d [0x%08X] bytes'%(ol,ol)
+			print outfname + ' written, %d [0x%08X] bytes' % (ol,ol)
 			outfile.close()
 		else:
-			print 'CFG decryption/decompression test OK, output size %d [0x%08X] bytes'%(ol,ol)
+			print 'CFG decryption/decompression test OK, ' \
+			'output size %d [0x%08X] bytes' % (ol,ol)
 			
 	elif options.decrypt:
 		outdata = draytools.decrypt_cfg(indata)
+		cksum = draytools.v2k_checksum(str(outdata))
+		if options.verbose:
+			print 'V2kCheckSum = %08X ' % \
+				cksum + ((cksum == 0) and 'OK' or 'FAIL')
 		ol = len(outdata)
 		if not options.test:
 			outfile = file(outfname, 'wb')
 			outfile.write(outdata)
 			outfile.close()
-			print outfname + ' written, %d [0x%08X] bytes'%(ol,ol)
+			print outfname + ' written, %d [0x%08X] bytes' % (ol,ol)
 		else:
-			print 'CFG decryption test OK, output size %d [0x%08X] bytes'%(ol,ol)
-			                                   
+			print 'CFG decryption test OK, ' \
+			'output size %d [0x%08X] bytes' % (ol,ol)
+
 	elif options.decompress:
 		outdata = draytools.decompress_cfg(indata)
-		cksum = draytools.v2k_checksum(indata)
+		cksum = draytools.v2k_checksum(str(indata))
 		if options.verbose:
-			print 'V2kCheckSum = %08X ' % cksum + ((cksum == 0) and 'OK' or 'FAIL')
+			print 'V2kCheckSum = %08X ' % \
+				cksum + ((cksum == 0) and 'OK' or 'FAIL')
 		ol = len(outdata)
 		if not options.test:
 			outfile = file(outfname, 'wb')
 			outfile.write(outdata)
 			outfile.close()
-			print outfname + ' written, %d [0x%08X] bytes'%(ol,ol)
+			print outfname + ' written, %d [0x%08X] bytes' % (ol,ol)
 		else:
-			print 'CFG decompression test OK, output size %d [0x%08X] bytes'%(ol,ol)
+			print 'CFG decompression test OK, ' \
+			'output size %d [0x%08X] bytes' % (ol,ol)
 
-	if options.password and not (True in [options.firmware, options.fw_all, options.fs]):
-		creds = draytools.get_credentials(draytools.de_cfg(indata))
-		print "Login:\t" + (creds[0] == "" and "admin" or creds[0])
-		print "Password:\t" + creds[1]
+	if options.password and \
+	not (True in [options.firmware, options.fw_all, options.fs]):
+		outdata = draytools.de_cfg(indata)
+		creds = draytools.get_credentials(outdata)
+		print "Login    :\t" + (creds[0] == "" and "admin" or creds[0])
+		print "Password :\t" + creds[1]
 		sys.exit(0)
 
 	if options.firmware:
@@ -332,9 +489,10 @@ if __name__=='__main__':
 			outfile = file(outfname, 'wb')
 			outfile.write(outdata)
 			outfile.close()
-			print outfname + ' written, %d [0x%08X] bytes'%(ol,ol)
+			print outfname + ' written, %d [0x%08X] bytes' % (ol,ol)
 		else:
-			print 'FW extraction test OK, output size %d [0x%08X] bytes'%(ol,ol)
+			print 'FW extraction test OK, ' \
+				'output size %d [0x%08X] bytes' % (ol,ol)
 
 	elif options.fw_all:
 		outdata = draytools.decompress_firmware(indata)
@@ -343,11 +501,13 @@ if __name__=='__main__':
 			outfile = file(outfname, 'wb')
 			outfile.write(outdata)
 			outfile.close()
-			print outfname + ' written, %d [0x%08X] bytes'%(ol,ol)
+			print outfname + ' written, %d [0x%08X] bytes' % (ol,ol)
 		else:
-			print 'FW extraction test OK, output size %d [0x%08X] bytes'%(ol,ol)
+			print 'FW extraction test OK, ' \
+				'output size %d [0x%08X] bytes' % (ol,ol)
 
-		fss, nf = draytools.decompress_fs_only(indata,outdir,options.test,options.verbose)
+		fss, nf = draytools.decompress_fs_only(indata, outdir, options.test,
+			options.verbose)
 		if not options.test:
 			print 'FS extracted to ['+ outdir+'], %d files extracted' % nf
 		else:
@@ -355,9 +515,21 @@ if __name__=='__main__':
 		
 
 	elif options.fs:
-		fss, nf = draytools.decompress_fs_only(indata,outdir,options.test,options.verbose)
+		fss, nf = draytools.decompress_fs_only(indata, outdir, options.test,
+			options.verbose)
 		if not options.test:
-			print 'FS extracted to ['+ outdir+'], %d files extracted' % nf
+			print 'FS extracted to [' + outdir + '], %d files extracted' % nf
 		else:
 			print 'FS extraction test OK, %d files extracted' % nf
 			
+	elif options.mac is not None:
+		xr = re.compile(\
+			r'^([a-fA-F0-9]{2}([:-]?)[a-fA-F0-9]{2}(\2[a-fA-F0-9]{2}){4})$')
+		rr = xr.match(options.mac)
+		if rr:
+			xmac = unhexlify(re.sub('[:\-]', '', options.mac))
+			print 'Master key:\t' + draytools.spkeygen(xmac)
+		else:
+			print '[ERR]:\tPlease enter a valid MAC address, e.g '\
+			'00-11-22-33-44-55 or 00:DE:AD:BE:EF:00 or 1337babecafe'
+# EOF

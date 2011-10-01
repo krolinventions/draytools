@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 #
 # This program uses code translated from Java code of Java-LZO compression 
-# program by Markus Oberhumer, author of LZO algorithm and its implementation:
-#
+# program by Markus Oberhumer, author of LZO algorithm and its implementation
 #
 # http://www.oberhumer.com/opensource/lzo/
 #
@@ -37,6 +36,7 @@
 
 from struct import pack, unpack
 
+
 class LZO_ERROR(Exception):
     ed = {0:'LZO_E_OK', \
         -1:'LZO_E_ERROR', \
@@ -47,14 +47,20 @@ class LZO_ERROR(Exception):
         -6:'LZO_E_LOOKBEHIND_OVERRUN', \
         -7:'LZO_E_EOF_NOT_FOUND', \
         -8:'LZO_E_INPUT_NOT_CONSUMED'}
+
     def __init__(self, value, pos=0):
         self.value = value
         self.pos = pos
+
     def __str__(self):
-        return (repr(self.ed[self.value]) + ' at offset %d [0x%x]'% (self.pos,self.pos))
+        return (repr(self.ed[self.value]) \
+        	+ ' at offset %d [0x%x]' % (self.pos,self.pos))
+
 
 class pydelzo:
-    copyright = "LZO Copyright (C) 1996-1999 Markus F.X.J. Oberhumer <markus.oberhumer@jk.uni-linz.ac.at>"
+    __version__ = "0.1"
+    copyright = "LZO Copyright (C) 1996-1999 Markus F.X.J. Oberhumer "\
+    "<markus.oberhumer@jk.uni-linz.ac.at>"
     
     LZO_E_OK                  =  0
     LZO_E_ERROR               = -1
@@ -77,9 +83,11 @@ class pydelzo:
         dst_off = 0
         src_off = 0
         src = bytearray(buf[5:]) + bytearray(256)
-        r = pydelzo.int_decompress(src, src_off, raw_len, dst, dst_off, dst_len)
+        r = pydelzo.int_decompress(src, src_off, raw_len, 
+        	dst, dst_off, dst_len)
         if r != pydelzo.LZO_E_OK:
-        	if strict or (not strict and r!=pydelzo.LZO_E_INPUT_NOT_CONSUMED):
+        	if strict or \
+        	(not strict and r != pydelzo.LZO_E_INPUT_NOT_CONSUMED):
 	            raise LZO_ERROR(r,dst_len[0]) 	     
         return dst[:min(raw_len,dst_len[0])]
 

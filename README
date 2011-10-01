@@ -1,13 +1,10 @@
 ------------------------------------------------------------------------------
-------------------------------------------------------------------------------
+ DrayTek Vigor password recovery, config & firmware tools
 
-DrayTek V2xxx config file and firmware decryption/decompression tools
-
-https://github.com/ammonium/draytools/
-
+ https://github.com/ammonium/draytools/
+ https://github.com/ammonium/draytools/wiki
 ------------------------------------------------------------------------------
-------------------------------------------------------------------------------
-draytools Copyright (C) AMMOnium <ammonium at mail dot ru>
+draytools Copyright (C) 2011 AMMOnium <ammonium at mail dot ru>
   
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -54,52 +51,38 @@ http://www.oberhumer.com/opensource/lzo/
    http://wildsau.idv.uni-linz.ac.at/mfx/lzo.html
 
 ------------------------------------------------------------------------------
-------------------------------------------------------------------------------
 1. Introduction
-------------------------------------------------------------------------------
 ------------------------------------------------------------------------------
 1.1. The problem.
 ------------------------------------------------------------------------------
-Modern DrayTek Vigor routers (V2xxx models, e.g. 2710, 2820, 2930 etc.) 
-compress and enrypt their configuration files, and their firmware is 
-compressed also. 
+
+Modern DrayTek Vigor routers (V2xxx models, e.g. 2710, 2820, 2930 etc. 
+and V3xxx, e.g 3200) compress and enrypt their configuration files, 
+and their firmware (and the web interface filesystem) is also compressed. 
 
 The router's owner may forget the admin password one day.
 Resetting the device to factory settings may not be an option, e.g. if 
 some complex network configuration has been done.
 
+* If you have a config file, but have lost/forgotten the login/password
+or,
+* even if you have lost everything, except the router
+draytools still can help you!
 
-If so, draytools are here to help.
+THIS PROGRAM WAS MADE TO BE USED BY LEGITIMATE DEVICE OWNERS ONLY.
+IF YOU USE IT, YOU ACCEPT THAT YOU ARE DOING EVERYTHING AT YOUR OWN RISK.
 
-
-In short, how the config file is compressed and encrypted:
-
-Config file:
-    1) take raw slice of memory of about 300 K
-    2) compress with LZO (v 1.08, lzo_1x )
-    3) take router model number, with leading uppercase "V", e.g. "V2710" 
-       and compute 1-byte sum of its raw bytes. It will be the key
-    4) pseudocode for encryption
-
-    for each byte b in data:
-        b = b XOR key
-        b = b - key
-        b = swap (3 right bits of b) and (5 left bits of b)
-
-    5) add 0x100-byte header
-To uncompress, simply reverse the operations.
-
-
-Firmware:
-	1) compress with LZO (v 1.08, lzo_1x )
-	2) add 0x100-byte header, loader code and magic signature
-	3) add compressed FS image to the end
 ------------------------------------------------------------------------------
 1.2. Features.
 ------------------------------------------------------------------------------
-1.2.1. Decrypt Draytek config files
-1.2.2. Decompress Draytek config files
-1.2.3. Print admin login & password from config files
+
+1.2.1. Print admin login & password from config files
+1.2.2. Generate FTP master key based on router's MAC address
+1.2.3. Decrypt Draytek config files
+1.2.4. Decompress Draytek config files
+1.2.5. Decompress Draytek firmware files
+1.2.6. Extract filesystem from Draytek firmware files
+
 ------------------------------------------------------------------------------
 1.3. List of supported routers 
 ------------------------------------------------------------------------------
@@ -126,13 +109,12 @@ Firmware operations tested on:
   3200
 
 ------------------------------------------------------------------------------
-------------------------------------------------------------------------------
 2. Installation and usage
 ------------------------------------------------------------------------------
-------------------------------------------------------------------------------
+SEE INSTALL file for more details
 2.1. Get Python (2.5 or newer) at http://www.python.org/getit/
-2.2. Execute
-
+2.2. Execute 
+------------------------------------------------------------------------------
 # python draytools.py --help
 
 Usage: draytools.py [options] file
@@ -147,7 +129,7 @@ Options:
                         parse files
   -v, --verbose         Verbose output
 
-  Config file (*.cfg) options:
+  Config file (*.cfg) commands:
     To be used on config files only
 
     -c, --config        Decrypt and decompress config
@@ -155,7 +137,7 @@ Options:
     -y, --decrypt       Decrypt config file
     -p, --password      Retrieve admin login and password from config file
 
-  Firmware file (*.all, *.rst, *.bin) options:
+  Firmware file (*.all, *.rst, *.bin) commands:
     To be used on firmware files only
 
     -f, --firmware      Decompress firmware
@@ -165,44 +147,48 @@ Options:
                         Output directory for filesystem contents, "fs_out" by
                         default
 
+  Miscellaneous commands:
+    Some other useful stuff
 
-and have fun.
+    -m MAC, --master-key=MAC
+                        Generate FTP master key for given router MAC address
 
-E.g. to print login&password from the config file:
+Examples:
 
+To print login&password from the config file:
 # python draytools.py -p config.cfg
+	Login and password will be displayed
 
 To decrypt & decompress the config file:
-
 # python draytools.py -c config.cfg
-
-"config.cfg.out" will be produced
+	Raw config file "config.cfg.out" will be produced
 
 To extract firmware and filesystem contents
-
 # python draytools.py -F firmware.all
-
-Firmware will be written to "firmware.all.out"
-Filesystem will be extracted to "fs_out" folder.
-
-2.3. Or even use draytools.py & pydelzo.py in your projects (GPL v3).
+	Uncompressed firmware will be written to file "firmware.all.out"
+	Filesystem will be extracted to "fs_out" folder.
 
 ------------------------------------------------------------------------------
+... and have fun.
+
+2.3. ... or even use draytools.py & pydelzo.py in your projects (GPL v3).
+
 ------------------------------------------------------------------------------
 3. Known BUGs and other notes
 ------------------------------------------------------------------------------
-------------------------------------------------------------------------------
+
 3.1. Input is not validated, many stupid default assumptions are being made.
-3.2. All DrayTek Vigor 2xxx models should be supported, if not, 
-visit https://github.com/ammonium/draytools/issues or email me.
-------------------------------------------------------------------------------
+3.2. All DrayTek Vigor 2xxx models should be supported, and some 3xxx too.
+If not, visit https://github.com/ammonium/draytools/issues or email me.
+3.3. Still no exception handling (sorry for being so lazy).
+
 ------------------------------------------------------------------------------
 4. TODOs
 ------------------------------------------------------------------------------
-------------------------------------------------------------------------------
-4.1. Further research of config file format
-4.2. Further research of firmware file format
+
+4.1. Further research of config file format (VPN, firewall rules, ...)
+4.2. Further research of firmware file format (checksums?)
 4.3. Try building custom firmware :)
-4.4. Master password generator (done, coming soon)
+
 ------------------------------------------------------------------------------
-------------------------------------------------------------------------------
+
