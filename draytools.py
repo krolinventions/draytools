@@ -51,27 +51,36 @@ class draytools:
 			self.echo = echo
 
 		def get_fname(self,i):
+			"""Return full filename of the file #i from FS header"""
 			addr = 0x10+i*44
 			return str(self.cdata[addr : addr+0x20].strip('\x00'))
 
 		def get_hash(self,i):
+			"""Return currently unknown hash for the file #i from FS header"""
 			addr = 0x10+i*44 + 0x20
 			return unpack("<L", str(self.cdata[addr : addr+4]))[0]
 
 		def get_offset(self,i):
+			"""Return offset of the file #i in FS block"""
 			addr = 0x10+i*44 + 0x24
 			return unpack("<L", str(self.cdata[addr : addr+4]))[0] \
 				+ self.datastart
 
 		def get_fsize(self,i):	
+			"""Return compressed size of the file #i"""
 			addr = 0x10+i*44 + 0x28
 			return unpack("<L", str(self.cdata[addr : addr+4]))[0]
 
 		def save_file(self,i):
+			"""Extract file #i from current FS"""			
 			fname = self.get_fname(i)
+			# compressed file data offset in FS block
 			ds = self.get_offset(i)
+			# size of compressed file
 			fs = self.get_fsize(i)
+			# compressed file data
 			fdata = self.cdata[ds : ds+fs]
+			# create all subdirs along the path if they don't exist
 			pp = fname.split('\\')
 			pp = [self.path] + pp
 			ppp = os.sep.join(pp[:-1])
@@ -79,9 +88,11 @@ class draytools:
 				if not os.path.exists(ppp) and not self.test:
 					os.makedirs(ppp)
 			nfname = os.sep.join(pp)
+			# size of uncompressed file
 			rawfs = -1
 			if not self.test:
 				ff = file(nfname,'wb')
+			# perform extraction, some file types are not compressed
 			if fs>0:	
 				if pp[-1].split('.')[-1].lower() \
 				in ['gif','jpg','cgi','cab','txt','jar']:
@@ -102,14 +113,17 @@ class draytools:
 			if not self.test:
 				ff.write(rawfdata)
 				ff.close()
+			# print some debug info for each file
 			if self.echo:
 				print '%08X "' % ds + fname + '" %08X' % fs \
 					+ ' %08X' % rawfs
 			return (fs, rawfs)
 
 		def save_all(self, path):
+			"""Extract all files from current FS"""
 			self.path = path
 			numfiles = unpack("<H", str(self.cdata[0x0E:0x10]))[0]
+			# All files data block offset in FS
 			self.datastart = 0x10 + 44 * numfiles	
 			for i in xrange(numfiles):
 				fs,rawfs = self.save_file(i)
@@ -118,6 +132,7 @@ class draytools:
 
 	@staticmethod
 	def v2k_checksum(data):
+		"""V2xxx checksum function, 32-bit checksum of a given block"""
 		a1 = (len(data) - 4) >> 2
 		if len(data) < 4:
 			return 0xFFFFFFFF
@@ -142,11 +157,13 @@ class draytools:
 
 	@staticmethod
 	def get_modelid(data):
+		"""Extract a model ID from config file header"""
 		modelid = data[0x0C:0x0E]
 		return modelid
 
 	@staticmethod
 	def decompress_cfg(data):
+		"""Decompress a config file"""
 		modelstr = "V" + format(unpack(">H", 
 			draytools.get_modelid(data))[0],"04X")
 		if draytools.verbose and draytools.modelprint: 
@@ -162,6 +179,7 @@ class draytools:
 
 	@staticmethod
 	def make_key(modelstr):
+		"""Construct a key out of a model string (like 'V2710')"""
 		sum = 0
 		for c in modelstr:
 			sum += ord(c)
@@ -184,6 +202,7 @@ class draytools:
 
 	@staticmethod
 	def decrypt(data, key):
+		"""Decrypt a block of data using given key"""
 		rdata = ''
 		for i in xrange(len(data)):
 			rdata += chr(draytools.dec(ord(data[i]), key))
@@ -192,6 +211,7 @@ class draytools:
 
 	@staticmethod
 	def brute_cfg(data):
+		"""Check all possible keys until data looks like decrypted"""
 		rdata = None
 		key = 0
 		for i in xrange(256):
@@ -205,6 +225,7 @@ class draytools:
 
 	@staticmethod
 	def decrypt_cfg(data):
+		"""Decrypt config, bruteforce if default key fails"""
 		modelstr = "V" + format(unpack(">H", 
 			draytools.get_modelid(data))[0],"04X")
 		if draytools.verbose:
@@ -220,16 +241,19 @@ class draytools:
 
 	@staticmethod
 	def get_credentials(data):
+		"""Extract admin credentials from config"""
 		login = data[0x100+0x28:0x100+0x40].replace('\x00','')
 		password = data[0x100+0x40:0x100+0x58].replace('\x00','')
 		return [login, password]
 
 	@staticmethod
 	def guess(data):
+		"""Return CFG type - raw(0), compressed(1), encrypted(2)"""
 		return ord(data[0x2D])
 
 	@staticmethod
 	def add_guess(data):
+		"""Guess is the cfg block compressed or not"""
 		if draytools.entropy(data) < 1.0 or len(data) > 0x10000:
  			return draytools.CFG_RAW
 		if "Vigor" in data and ("Series" in data or "draytek" in data):
@@ -238,6 +262,7 @@ class draytools:
 
 	@staticmethod
 	def de_cfg(data):
+		"""Get raw config data from raw /compressed/encrypted & comressed"""
 		g = draytools.guess(data) 
 		if g == draytools.CFG_RAW:
 			if draytools.verbose:
@@ -254,6 +279,7 @@ class draytools:
 
 	@staticmethod
 	def decompress_firmware(data):
+		"""Decompress firmware"""
 		flen = len(data)
 		sigstart = data.find('\xA5\xA5\xA5\x5A\xA5\x5A')
 		if sigstart <= 0:
@@ -275,6 +301,7 @@ class draytools:
 
 	@staticmethod
 	def decompress_fs(data, path, test = False):
+		"""Decompress filesystem"""
 		lzofsdatalen = unpack('>L', data[4:8])[0]
 		if draytools.verbose:
 			print 'Compressed FS length: %d [0x%08X]' % (lzofsdatalen, 
@@ -288,6 +315,7 @@ class draytools:
 	
 	@staticmethod
 	def decompress_fs_only(data, path, test = False):
+		"""Decompress filesystem"""
 		fsstart = unpack('>L', data[:4])[0]
 		if draytools.verbose:
 			print 'FS block start at: %d [0x%08X]' % (fsstart, fsstart)
@@ -295,6 +323,7 @@ class draytools:
 
 	@staticmethod
 	def entropy(data):
+		"""Calculate Shannon entropy (in bits per byte)"""
 		flist = defaultdict(int)
 		dlen = len(data)
 		data = map(ord, data)
@@ -309,6 +338,7 @@ class draytools:
 
 	@staticmethod
 	def spkeygen(mac):
+		"""Generate a master key like 'AbCdEfGh' from MAC address"""
 		atu = 'WAHOBXEZCLPDYTFQMJRVINSUGK'
 		atl = 'kgusnivrjmqftydplczexbohaw'
 		res = ['\x00'] * 8
@@ -387,6 +417,7 @@ if __name__ == '__main__':
 """usage: %prog [options] file
 DrayTek Vigor V2xxx/V3xxx password recovery, config & firmware tools"""
 
+# initialize cmdline option parser
 	optparse.OptionParser.format_epilog = lambda self, formatter: self.epilog
 	parser = optparse.OptionParser(usage=usage, \
 		version="%prog "+draytools.__version__, \
@@ -430,6 +461,7 @@ To extract firmware and filesystem contents
 		action="store_true", dest="verbose",
 		help="Verbose output", default=False)
 
+# config file option group for cmdline option parser 
 
 	cfggroup.add_option('-c', '--config',
 		action="store_true", dest="config",
@@ -448,6 +480,7 @@ To extract firmware and filesystem contents
 		help="Retrieve admin login and password from config file", 
 		default=False)
 
+# firmware/fs option group for cmdline option parser 
 
 	fwgroup.add_option('-f', '--firmware',
 		action="store_true", dest="firmware",
@@ -467,6 +500,7 @@ To extract firmware and filesystem contents
 		"Output directory for filesystem contents, \"fs_out\" by default", 
 		default="fs_out")
 
+# miscellaneous option group for cmdline option parser 
 	mgroup.add_option('-m', '--master-key',
 		action="store", dest="mac",
 		help="Generate FTP master key for given router MAC address", 
@@ -482,6 +516,7 @@ To extract firmware and filesystem contents
 
 	draytools.verbose = options.verbose
 
+# default output filename is input filename + '.out'
 	outfname = options.outfile is not None and options.outfile \
 		or (len(args) > 0 and args[0]+'.out' or 'file.out')
 	outdir = options.outdir
@@ -501,10 +536,12 @@ To extract firmware and filesystem contents
 		print 'Run "draytools --help"'
 		sys.exit(1)
 
+# open input file
 	if not options.mac:
 		try:
 			infile = file(args[0],'rb')
 			indata = infile.read()
+			# if default FS extraction path is used, put it near input file
 			if outdir == 'fs_out':
 				outdir = os.path.join(os.path.dirname(
 					os.path.abspath(args[0])),'fs_out')
@@ -513,6 +550,7 @@ To extract firmware and filesystem contents
 			print '[ERR]:\tInput file open failed'
 			sys.exit(2)
 
+# Command: get raw config file
 	if options.config:
 		g = -1
 		try:
@@ -535,6 +573,7 @@ To extract firmware and filesystem contents
 			print 'CFG decryption/decompression test OK, ' \
 			'output size %d [0x%08X] bytes' % (ol,ol)
 			
+# Command: decrypt config file
 	elif options.decrypt:
 		try:
 			outdata = draytools.decrypt_cfg(indata)
@@ -556,6 +595,7 @@ To extract firmware and filesystem contents
 			print 'CFG decryption test OK, ' \
 			'output size %d [0x%08X] bytes' % (ol,ol)
 
+# Command: decompress config file
 	elif options.decompress:
 		try:
 			outdata = draytools.decompress_cfg(indata)
@@ -576,6 +616,7 @@ To extract firmware and filesystem contents
 			print 'CFG decompression test OK, ' \
 			'output size %d [0x%08X] bytes' % (ol,ol)
 
+# Command: extract admin credentials from config file
 	if options.password and \
 	not (True in [options.firmware, options.fw_all, options.fs]):
 		g = -1
@@ -589,6 +630,7 @@ To extract firmware and filesystem contents
 		print "Password :\t" + (creds[1] == "" and "admin" or creds[1])
 		sys.exit(0)
 
+# Command: extract firmware
 	if options.firmware:
 		try:
 			outdata = draytools.decompress_firmware(indata)
@@ -606,6 +648,7 @@ To extract firmware and filesystem contents
 			print 'FW extraction test OK, ' \
 				'output size %d [0x%08X] bytes' % (ol,ol)
 
+# Command: extract firmware and filesystem
 	elif options.fw_all:
 		try:
 			outdata = draytools.decompress_firmware(indata)
@@ -635,6 +678,7 @@ To extract firmware and filesystem contents
 			print 'FS extraction test OK, %d files extracted' % nf
 		
 
+# Command: extract filesystem
 	elif options.fs:
 		try:
 			fss, nf = draytools.decompress_fs_only(indata, outdir, 
@@ -647,8 +691,10 @@ To extract firmware and filesystem contents
 			print 'FS extracted to [' + outdir + '], %d files extracted' % nf
 		else:
 			print 'FS extraction test OK, %d files extracted' % nf
-			
+
+# Command: generate master password
 	elif options.mac is not None:
+	    # validate mac address (hex, delimited by colons, dashes or nothing)
 		xr = re.compile(\
 			r'^([a-fA-F0-9]{2}([:-]?)[a-fA-F0-9]{2}(\2[a-fA-F0-9]{2}){4})$')
 		rr = xr.match(options.mac)
