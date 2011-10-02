@@ -233,6 +233,7 @@ class draytools:
 			draytools.modelprint = False
 		ckey = draytools.make_key(modelstr)
 		rdata = draytools.decrypt(data[0x100:], ckey)
+		# if the decrypted data does not look good, bruteforce
 		if draytools.add_guess(rdata) != draytools.CFG_LZO:
 			rdata = draytools.brute_cfg(data[0x100:])
 		elif draytools.verbose:
@@ -254,8 +255,10 @@ class draytools:
 	@staticmethod
 	def add_guess(data):
 		"""Guess is the cfg block compressed or not"""
+		# Uncompressed block is large and has low entropy
 		if draytools.entropy(data) < 1.0 or len(data) > 0x10000:
  			return draytools.CFG_RAW
+		# Compressed block still has pieces of cleartext at the beginning
 		if "Vigor" in data and ("Series" in data or "draytek" in data):
 			return draytools.CFG_LZO
 		return draytools.CFG_ENC
@@ -282,9 +285,10 @@ class draytools:
 		"""Decompress firmware"""
 		flen = len(data)
 		sigstart = data.find('\xA5\xA5\xA5\x5A\xA5\x5A')
+		# Try an alternative signature
 		if sigstart <= 0:
 			sigstart = data.find('\x5A\x5A\xA5\x5A\xA5\x5A')
-
+		# Compressed FW block found, now decompress
 		if sigstart > 0:
 			if draytools.verbose:
 				print 'Signature found at [0x%08X]' % sigstart
@@ -306,7 +310,7 @@ class draytools:
 		if draytools.verbose:
 			print 'Compressed FS length: %d [0x%08X]' % (lzofsdatalen, 
 				lzofsdatalen)
-
+		# stupid assumption of raw FS length. Seems OK for now
 		fsdatalen = 0x800000
 		fs_raw = pydelzo.decompress('\xF0' + pack(">L", fsdatalen) \
 			 + data[0x08:0x08 + lzofsdatalen])
@@ -327,35 +331,41 @@ class draytools:
 		flist = defaultdict(int)
 		dlen = len(data)
 		data = map(ord, data)
+		# count occurencies
 		for byte in data:
 			flist[byte] += 1
 		ent = 0.0
+		# convert count of occurencies into frequency
 		for freq in flist.values():
 			if freq > 0:
 				ffreq = float(freq)/dlen
+				# actual entropy calcualtion
 				ent -= ffreq * math.log(ffreq, 2)
 		return ent
 
 	@staticmethod
 	def spkeygen(mac):
 		"""Generate a master key like 'AbCdEfGh' from MAC address"""
+		# stupid translation from MIPS assembly, but works
 		atu = 'WAHOBXEZCLPDYTFQMJRVINSUGK'
 		atl = 'kgusnivrjmqftydplczexbohaw'
 		res = ['\x00'] * 8
 		st = [0] * 8
-
+		# compute 31*(31*(31*(31*(31*m0+m1)+m2)+m3)+m4)+m5
 		a3 = 0
 		for i in mac:
 			a3 *= 31
 			a3 += ord(i)
 		a3 &= 0xFFFFFFFF
+		# Divide by 13 :) Old assembly trick, I leave it here
+		# 0x4EC4EC4F is a multiplicative inverse for 13
 		ck = 0x4EC4EC4F * a3
-
 		v1 = (ck & 0xFFFFFFFF00000000) >> 32
-
+		# shift by two
 		v1 >>= 3
 		v0 = v1 << 1
 		v0 &= 0xFFFFFFFF
+		# trick ends here and now v0 = a3 / 13
 		v0 += v1
 		v0 <<= 2
 		v0 &= 0xFFFFFFFF
@@ -385,14 +395,17 @@ class draytools:
 			v0 += a3
 			v0 += t0
 			v0 += v1
+			# v0 here is a 32-bit sum of currently computed key chars
 			v0 &= 0xFFFFFFFF
 			a3 = v0 + a0
+			# Again divide by 13
 			i1 = a3 * 0x4EC4EC4F
 			a0 = i & 1
 			st[i] = a3
 			v1 = (i1 & 0xFFFFFFFF00000000) >> 32
 			v1 >>= 3
 			v0 = v1 << 1
+			# here v0 = a3 / 13
 			v0 += v1
 			v0 <<= 2
 			v0 += v1
