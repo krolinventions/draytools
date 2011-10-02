@@ -30,7 +30,7 @@ from pydelzo import pydelzo, LZO_ERROR
 
 class draytools:
 	"""DrayTek Vigor password recovery, config & firmware tools"""
-	__version__ = "v0.3"
+	__version__ = "v0.31"
 	copyright = \
 	"draytools Copyright (C) 2011 AMMOnium <ammonium at mail dot ru>"
 	
@@ -136,8 +136,15 @@ class draytools:
 		return v0 & 0xFFFFFFFF
 
 	@staticmethod
-	def decompress_cfg(data):
+	def get_modelid(data):
 		modelid = data[0x0C:0x0E]
+#		if modelid == '\x28\x00':
+#			modelid = '\x22\x00'
+		return modelid
+
+	@staticmethod
+	def decompress_cfg(data):
+#		modelid = draytools.get_modelid(data)
 		rawcfgsize = 0x00100000
 		lzocfgsize = unpack(">L", data[0x24:0x28])[0]
 		raw = data[:0x100] \
@@ -175,10 +182,23 @@ class draytools:
 		return rdata
 
 	@staticmethod
+	def brute_cfg(data):
+		rdata = None
+		for i in xrange(256):
+			rdata = draytools.decrypt(data, i)
+			if draytools.guess(rdata) == draytools.CFG_LZO:
+				break
+		return rdata
+
+	@staticmethod
 	def decrypt_cfg(data):
-		modelstr = "V" + format(unpack(">H", data[0x0C:0x0E])[0],"04X")
+		modelstr = "V" + format(unpack(">H", 
+			draytools.get_modelid(data))[0],"04X")
 		ckey = draytools.make_key(modelstr)
-		return data[:0x100] + draytools.decrypt(data[0x100:], ckey)
+		rdata = draytools.decrypt(data[0x100:], ckey)
+		if draytools.guess(rdata) != draytools.CFG_LZO:
+			rdata = draytools.brute_cfg(data[0x100:])
+		return data[:0x100] + rdata
 
 	@staticmethod
 	def get_credentials(data):
@@ -190,7 +210,7 @@ class draytools:
 	def guess(data):
 		if len(data) > 0x30000:
 			return draytools.CFG_RAW
-		if "Vigor" in data and "draytek" in data:
+		if "Vigor" in data and ("Series" in data or "draytek" in data):
 			return draytools.CFG_LZO
 		return draytools.CFG_ENC
 
@@ -220,6 +240,7 @@ class draytools:
 					+ data[lzostart:lzostart+lzosize])
 		else:
 			print '[ERR]:\tCompressed FW signature not found!'
+			raise Exception('Compressed FW signature not found')
 			return ''
 
 	@staticmethod
@@ -314,7 +335,7 @@ if __name__=='__main__':
 
 	usage = \
 """usage: %prog [options] file
-DrayTek V2xxx config file and firmware decryption/decompression tools"""
+DrayTek Vigor V2xxx/V3xxx password recovery, config & firmware tools"""
 
 	optparse.OptionParser.format_epilog = lambda self, formatter: self.epilog
 	parser = optparse.OptionParser(usage=usage, \
@@ -416,6 +437,7 @@ To extract firmware and filesystem contents
 	infile = None
 	data = None
 	indata = None
+	outdata = None
 
 	if len(args) > 1:
 		print '[ERR]:\tToo much arguments, only input file name expected'
@@ -427,11 +449,20 @@ To extract firmware and filesystem contents
 		sys.exit(1)
 
 	if not options.mac:
-		infile = file(args[0],'rb')
-		indata = infile.read()
+		try:
+			infile = file(args[0],'rb')
+			indata = infile.read()
+		except IOError:
+			print '[ERR]:\tInput file open failed'
+			sys.exit(2)
 
 	if options.config:
-		outdata = draytools.de_cfg(indata)
+		try:
+			outdata = draytools.de_cfg(indata)
+		except LZO_ERROR:
+			print '[ERR]:\tInput file corrupted or not supported'
+			sys.exit(3)
+						
 		ol = len(outdata)
 		if not options.test:
 			outfile = file(outfname, 'wb')
@@ -443,7 +474,12 @@ To extract firmware and filesystem contents
 			'output size %d [0x%08X] bytes' % (ol,ol)
 			
 	elif options.decrypt:
-		outdata = draytools.decrypt_cfg(indata)
+		try:
+			outdata = draytools.decrypt_cfg(indata)
+		except LZO_ERROR:
+			print '[ERR]:\tInput file corrupted or not supported'
+			sys.exit(3)
+
 		cksum = draytools.v2k_checksum(str(outdata))
 		if options.verbose:
 			print 'V2kCheckSum = %08X ' % \
@@ -459,7 +495,11 @@ To extract firmware and filesystem contents
 			'output size %d [0x%08X] bytes' % (ol,ol)
 
 	elif options.decompress:
-		outdata = draytools.decompress_cfg(indata)
+		try:
+			outdata = draytools.decompress_cfg(indata)
+		except LZO_ERROR:
+			print '[ERR]:\tInput file corrupted or not supported'
+			sys.exit(3)
 		cksum = draytools.v2k_checksum(str(indata))
 		if options.verbose:
 			print 'V2kCheckSum = %08X ' % \
@@ -476,14 +516,23 @@ To extract firmware and filesystem contents
 
 	if options.password and \
 	not (True in [options.firmware, options.fw_all, options.fs]):
-		outdata = draytools.de_cfg(indata)
+		try:
+			outdata = draytools.de_cfg(indata)
+		except LZO_ERROR:
+			print '[ERR]:\tInput file corrupted or not supported'
+			sys.exit(3)
 		creds = draytools.get_credentials(outdata)
 		print "Login    :\t" + (creds[0] == "" and "admin" or creds[0])
-		print "Password :\t" + creds[1]
+		print "Password :\t" + (creds[1] == "" and "admin" or creds[1])
 		sys.exit(0)
 
 	if options.firmware:
-		outdata = draytools.decompress_firmware(indata)
+		try:
+			outdata = draytools.decompress_firmware(indata)
+		except:
+			print '[ERR]:\tInput file corrupted or not supported'
+			sys.exit(3)
+
 		ol = len(outdata)
 		if not options.test:
 			outfile = file(outfname, 'wb')
@@ -495,7 +544,12 @@ To extract firmware and filesystem contents
 				'output size %d [0x%08X] bytes' % (ol,ol)
 
 	elif options.fw_all:
-		outdata = draytools.decompress_firmware(indata)
+		try:
+			outdata = draytools.decompress_firmware(indata)
+		except:
+			print '[ERR]:\tInput file corrupted or not supported'
+			sys.exit(3)
+
 		ol = len(outdata)
 		if not options.test:
 			outfile = file(outfname, 'wb')
@@ -506,17 +560,26 @@ To extract firmware and filesystem contents
 			print 'FW extraction test OK, ' \
 				'output size %d [0x%08X] bytes' % (ol,ol)
 
-		fss, nf = draytools.decompress_fs_only(indata, outdir, options.test,
-			options.verbose)
+		try:
+			fss, nf = draytools.decompress_fs_only(indata, outdir, 
+				options.test, options.verbose)
+		except:
+			print '[ERR]:\tInput file corrupted or not supported'
+			sys.exit(3)
 		if not options.test:
-			print 'FS extracted to ['+ outdir+'], %d files extracted' % nf
+			print 'FS extracted to [' + outdir + '], %d files extracted' % nf
 		else:
 			print 'FS extraction test OK, %d files extracted' % nf
 		
 
 	elif options.fs:
-		fss, nf = draytools.decompress_fs_only(indata, outdir, options.test,
-			options.verbose)
+		try:
+			fss, nf = draytools.decompress_fs_only(indata, outdir, 
+				options.test, options.verbose)
+		except:
+			print '[ERR]:\tInput file corrupted or not supported'
+			sys.exit(3)
+
 		if not options.test:
 			print 'FS extracted to [' + outdir + '], %d files extracted' % nf
 		else:
