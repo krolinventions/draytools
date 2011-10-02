@@ -21,9 +21,11 @@
 import sys
 import os
 import re
+import math
 
 from struct import pack, unpack
 from binascii import hexlify, unhexlify
+from collections import defaultdict
 
 from pydelzo import pydelzo, LZO_ERROR
 
@@ -38,6 +40,8 @@ class draytools:
 	CFG_LZO = 1
 	CFG_ENC = 2
 
+	verbose = False
+	
 	class fs:
 		"""Draytek filesystem utilities"""
 		def __init__(self, data, test=False, echo=False):
@@ -98,7 +102,7 @@ class draytools:
 				ff.write(rawfdata)
 				ff.close()
 			if self.echo:
-				print '%08X ' % ds + fname + ' %08X' % fs \
+				print '%08X "' % ds + fname + '" %08X' % fs \
 					+ ' %08X' % rawfs
 			return (fs, rawfs)
 
@@ -184,16 +188,21 @@ class draytools:
 	@staticmethod
 	def brute_cfg(data):
 		rdata = None
+		key = None
 		for i in xrange(256):
 			rdata = draytools.decrypt(data, i)
 			if draytools.guess(rdata) == draytools.CFG_LZO:
+				key = i
 				break
+		print 'Bruteforced the cfg key: [0x%02X]' % key
 		return rdata
 
 	@staticmethod
 	def decrypt_cfg(data):
 		modelstr = "V" + format(unpack(">H", 
 			draytools.get_modelid(data))[0],"04X")
+		if draytools.verbose:
+			print 'Model is ' + modelstr
 		ckey = draytools.make_key(modelstr)
 		rdata = draytools.decrypt(data[0x100:], ckey)
 		if draytools.guess(rdata) != draytools.CFG_LZO:
@@ -208,7 +217,7 @@ class draytools:
 
 	@staticmethod
 	def guess(data):
-		if len(data) > 0x30000:
+		if draytools.entropy(data) < 1.0 or len(data) > 0x10000:
 			return draytools.CFG_RAW
 		if "Vigor" in data and ("Series" in data or "draytek" in data):
 			return draytools.CFG_LZO
@@ -218,11 +227,17 @@ class draytools:
 	def de_cfg(data):
 		g = draytools.guess(data) 
 		if g == draytools.CFG_RAW:
-			return data
+			if draytools.verbose:
+				print 'File is: not compressed, not encrypted'
+			return g, data
 		elif g == draytools.CFG_LZO:
-			return draytools.decompress_cfg(data)
+			if draytools.verbose:
+				print 'File is: compressed, not encrypted'
+			return g, draytools.decompress_cfg(data)
 		elif g == draytools.CFG_ENC:
-			return draytools.decompress_cfg(draytools.decrypt_cfg(data))
+			if draytools.verbose:
+				print 'File is: compressed, encrypted'
+			return g, draytools.decompress_cfg(draytools.decrypt_cfg(data))
 
 	@staticmethod
 	def decompress_firmware(data):
@@ -232,6 +247,8 @@ class draytools:
 			sigstart = data.find('\x5A\x5A\xA5\x5A\xA5\x5A')
 
 		if sigstart > 0:
+			if draytools.verbose:
+				print 'Signature found at [0x%08X]' % sigstart
 			lzosizestart = sigstart + 6
 			lzostart = lzosizestart + 4
 			lzosize = unpack('>L', data[lzosizestart:lzostart])[0]
@@ -244,18 +261,38 @@ class draytools:
 			return ''
 
 	@staticmethod
-	def decompress_fs(data, path, test = False, echo = False):
+	def decompress_fs(data, path, test = False):
 		lzofsdatalen = unpack('>L', data[4:8])[0]
+		if draytools.verbose:
+			print 'Compressed FS length: %d [0x%08X]' % (lzofsdatalen, 
+				lzofsdatalen)
+
 		fsdatalen = 0x800000
 		fs_raw = pydelzo.decompress('\xF0' + pack(">L", fsdatalen) \
 			 + data[0x08:0x08 + lzofsdatalen])
-		cfs = draytools.fs(fs_raw, test, echo)
+		cfs = draytools.fs(fs_raw, test, draytools.verbose)
 		return (lzofsdatalen, cfs.save_all(path))
 	
 	@staticmethod
-	def decompress_fs_only(data, path, test = False, echo = False):
+	def decompress_fs_only(data, path, test = False):
 		fsstart = unpack('>L', data[:4])[0]
-		return draytools.decompress_fs(data[fsstart:], path, test, echo)
+		if draytools.verbose:
+			print 'FS block start at: %d [0x%08X]' % (fsstart, fsstart)
+		return draytools.decompress_fs(data[fsstart:], path, test)
+
+	@staticmethod
+	def entropy(data):
+		flist = defaultdict(int)
+		dlen = len(data)
+		data = map(ord, data)
+		for byte in data:
+			flist[byte] += 1
+		ent = 0.0
+		for freq in flist.values():
+			if freq > 0:
+				ffreq = float(freq)/dlen
+				ent -= ffreq * math.log(ffreq, 2)
+		return ent
 
 	@staticmethod
 	def spkeygen(mac):
@@ -430,9 +467,12 @@ To extract firmware and filesystem contents
 	
 	options, args = parser.parse_args()
 
+	draytools.verbose = options.verbose
+
 	outfname = options.outfile is not None and options.outfile \
 		or (len(args) > 0 and args[0]+'.out' or 'file.out')
 	outdir = options.outdir
+
 
 	infile = None
 	data = None
@@ -461,10 +501,15 @@ To extract firmware and filesystem contents
 			sys.exit(2)
 
 	if options.config:
+		g = -1
 		try:
-			outdata = draytools.de_cfg(indata)
+			g,outdata = draytools.de_cfg(indata)
 		except LZO_ERROR:
 			print '[ERR]:\tInput file corrupted or not supported'
+			sys.exit(3)
+		if g == draytools.CFG_RAW:
+			print '[ERR]:\tNothing to do. '\
+				'Config file is already not encrypted and not compressed.'
 			sys.exit(3)
 						
 		ol = len(outdata)
@@ -520,8 +565,9 @@ To extract firmware and filesystem contents
 
 	if options.password and \
 	not (True in [options.firmware, options.fw_all, options.fs]):
+		g = -1
 		try:
-			outdata = draytools.de_cfg(indata)
+			g,outdata = draytools.de_cfg(indata)
 		except LZO_ERROR:
 			print '[ERR]:\tInput file corrupted or not supported'
 			sys.exit(3)
@@ -566,7 +612,7 @@ To extract firmware and filesystem contents
 
 		try:
 			fss, nf = draytools.decompress_fs_only(indata, outdir, 
-				options.test, options.verbose)
+				options.test)
 		except:
 			print '[ERR]:\tInput file corrupted or not supported'
 			sys.exit(3)
@@ -579,7 +625,7 @@ To extract firmware and filesystem contents
 	elif options.fs:
 		try:
 			fss, nf = draytools.decompress_fs_only(indata, outdir, 
-				options.test, options.verbose)
+				options.test)
 		except:
 			print '[ERR]:\tInput file corrupted or not supported'
 			sys.exit(3)
