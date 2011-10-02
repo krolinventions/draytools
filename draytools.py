@@ -188,6 +188,7 @@ class draytools:
 		for i in xrange(len(data)):
 			rdata += chr(draytools.dec(ord(data[i]), key))
 		return rdata
+#		return ''.join(map(lambda od:chr(draytools.dec(ord(od),key)),data))
 
 	@staticmethod
 	def brute_cfg(data):
