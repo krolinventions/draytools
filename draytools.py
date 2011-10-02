@@ -155,7 +155,7 @@ class draytools:
 			draytools.modelprint = True
 		rawcfgsize = 0x00100000
 		lzocfgsize = unpack(">L", data[0x24:0x28])[0]
-		raw = data[:0x100] \
+		raw = data[:0x2D] + '\x00' + data[0x2E:0x100] \
 			+ pydelzo.decompress('\xF0' + pack(">L",rawcfgsize) \
 			+ data[0x100:0x100+lzocfgsize])
 		return raw
@@ -198,7 +198,8 @@ class draytools:
 			if draytools.add_guess(rdata) == draytools.CFG_LZO:
 				key = i
 				break
-		print 'Found key:\t[0x%02X]' % key
+		if draytools.verbose:
+			print 'Found key:\t[0x%02X]' % key
 		return rdata
 
 	@staticmethod
@@ -212,9 +213,9 @@ class draytools:
 		rdata = draytools.decrypt(data[0x100:], ckey)
 		if draytools.add_guess(rdata) != draytools.CFG_LZO:
 			rdata = draytools.brute_cfg(data[0x100:])
-		else:
+		elif draytools.verbose:
 			print 'Used key :\t[0x%02X]' % ckey
-		return data[:0x100] + rdata
+		return data[:0x2D] + '\x01' + data[0x2E:0x100] + rdata
 
 	@staticmethod
 	def get_credentials(data):
@@ -378,7 +379,7 @@ class draytools:
 		
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
 	import optparse
 
 	usage = \
@@ -514,7 +515,7 @@ To extract firmware and filesystem contents
 	if options.config:
 		g = -1
 		try:
-			g,outdata = draytools.de_cfg(indata)
+			g, outdata = draytools.de_cfg(indata)
 		except LZO_ERROR:
 			print '[ERR]:\tInput file corrupted or not supported'
 			sys.exit(3)
@@ -578,7 +579,7 @@ To extract firmware and filesystem contents
 	not (True in [options.firmware, options.fw_all, options.fs]):
 		g = -1
 		try:
-			g,outdata = draytools.de_cfg(indata)
+			g, outdata = draytools.de_cfg(indata)
 		except LZO_ERROR:
 			print '[ERR]:\tInput file corrupted or not supported'
 			sys.exit(3)
