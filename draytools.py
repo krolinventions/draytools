@@ -41,7 +41,8 @@ class draytools:
 	CFG_ENC = 2
 
 	verbose = False
-	
+	modelprint = True
+
 	class fs:
 		"""Draytek filesystem utilities"""
 		def __init__(self, data, test=False, echo=False):
@@ -142,13 +143,16 @@ class draytools:
 	@staticmethod
 	def get_modelid(data):
 		modelid = data[0x0C:0x0E]
-#		if modelid == '\x28\x00':
-#			modelid = '\x22\x00'
 		return modelid
 
 	@staticmethod
 	def decompress_cfg(data):
-#		modelid = draytools.get_modelid(data)
+		modelstr = "V" + format(unpack(">H", 
+			draytools.get_modelid(data))[0],"04X")
+		if draytools.verbose and draytools.modelprint: 
+			print 'Model is :\t' + modelstr
+		else:
+			draytools.modelprint = True
 		rawcfgsize = 0x00100000
 		lzocfgsize = unpack(">L", data[0x24:0x28])[0]
 		raw = data[:0x100] \
@@ -188,13 +192,13 @@ class draytools:
 	@staticmethod
 	def brute_cfg(data):
 		rdata = None
-		key = None
+		key = 0
 		for i in xrange(256):
 			rdata = draytools.decrypt(data, i)
-			if draytools.guess(rdata) == draytools.CFG_LZO:
+			if draytools.add_guess(rdata) == draytools.CFG_LZO:
 				key = i
 				break
-		print 'Bruteforced the cfg key: [0x%02X]' % key
+		print 'Found key:\t[0x%02X]' % key
 		return rdata
 
 	@staticmethod
@@ -202,11 +206,14 @@ class draytools:
 		modelstr = "V" + format(unpack(">H", 
 			draytools.get_modelid(data))[0],"04X")
 		if draytools.verbose:
-			print 'Model is ' + modelstr
+			print 'Model is :\t' + modelstr
+			draytools.modelprint = False
 		ckey = draytools.make_key(modelstr)
 		rdata = draytools.decrypt(data[0x100:], ckey)
-		if draytools.guess(rdata) != draytools.CFG_LZO:
+		if draytools.add_guess(rdata) != draytools.CFG_LZO:
 			rdata = draytools.brute_cfg(data[0x100:])
+		else:
+			print 'Used key :\t[0x%02X]' % ckey
 		return data[:0x100] + rdata
 
 	@staticmethod
@@ -217,8 +224,12 @@ class draytools:
 
 	@staticmethod
 	def guess(data):
+		return ord(data[0x2D])
+
+	@staticmethod
+	def add_guess(data):
 		if draytools.entropy(data) < 1.0 or len(data) > 0x10000:
-			return draytools.CFG_RAW
+ 			return draytools.CFG_RAW
 		if "Vigor" in data and ("Series" in data or "draytek" in data):
 			return draytools.CFG_LZO
 		return draytools.CFG_ENC
@@ -228,15 +239,15 @@ class draytools:
 		g = draytools.guess(data) 
 		if g == draytools.CFG_RAW:
 			if draytools.verbose:
-				print 'File is: not compressed, not encrypted'
+				print 'File is  :\tnot compressed, not encrypted'
 			return g, data
 		elif g == draytools.CFG_LZO:
 			if draytools.verbose:
-				print 'File is: compressed, not encrypted'
+				print 'File is  :\tcompressed, not encrypted'
 			return g, draytools.decompress_cfg(data)
 		elif g == draytools.CFG_ENC:
 			if draytools.verbose:
-				print 'File is: compressed, encrypted'
+				print 'File is  :\tcompressed, encrypted'
 			return g, draytools.decompress_cfg(draytools.decrypt_cfg(data))
 
 	@staticmethod
