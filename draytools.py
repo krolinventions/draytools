@@ -694,7 +694,7 @@ To extract firmware and filesystem contents
 
 # Command: generate master password
 	elif options.mac is not None:
-	    # validate mac address (hex, delimited by colons, dashes or nothing)
+		# validate mac address (hex, delimited by colons, dashes or nothing)
 		xr = re.compile(\
 			r'^([a-fA-F0-9]{2}([:-]?)[a-fA-F0-9]{2}(\2[a-fA-F0-9]{2}){4})$')
 		rr = xr.match(options.mac)
