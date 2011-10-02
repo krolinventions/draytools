@@ -452,6 +452,10 @@ To extract firmware and filesystem contents
 		try:
 			infile = file(args[0],'rb')
 			indata = infile.read()
+			if outdir == 'fs_out':
+				outdir = os.path.join(os.path.dirname(
+					os.path.abspath(args[0])),'fs_out')
+
 		except IOError:
 			print '[ERR]:\tInput file open failed'
 			sys.exit(2)
