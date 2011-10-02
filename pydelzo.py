@@ -54,10 +54,11 @@ class LZO_ERROR(Exception):
 
     def __str__(self):
         return (repr(self.ed[self.value]) \
-        	+ ' at offset %d [0x%x]' % (self.pos,self.pos))
+            + ' at offset %d [0x%x]' % (self.pos,self.pos))
 
 
 class pydelzo:
+    """Python translation of Java-LZO decompression code"""
     __version__ = "0.1"
     copyright = "LZO Copyright (C) 1996-1999 Markus F.X.J. Oberhumer "\
     "<markus.oberhumer@jk.uni-linz.ac.at>"
@@ -74,6 +75,8 @@ class pydelzo:
     
     @staticmethod
     def decompress(buf, strict=False):
+        """Perform decompression of a data block"""
+        # length of uncompressed data
         raw_len = unpack('>L', str(buf[1:5]))[0]
 
         dst = bytearray(raw_len)
@@ -84,16 +87,19 @@ class pydelzo:
         src_off = 0
         src = bytearray(buf[5:]) + bytearray(256)
         r = pydelzo.int_decompress(src, src_off, raw_len, 
-        	dst, dst_off, dst_len)
+            dst, dst_off, dst_len)
+        # if strict mode is on, die if header had specified more data 
+        # than actually received
         if r != pydelzo.LZO_E_OK:
-        	if strict or \
-        	(not strict and r != pydelzo.LZO_E_INPUT_NOT_CONSUMED):
-	            raise LZO_ERROR(r,dst_len[0]) 	     
+            if strict or \
+            (not strict and r != pydelzo.LZO_E_INPUT_NOT_CONSUMED):
+                raise LZO_ERROR(r,dst_len[0])          
         return dst[:min(raw_len,dst_len[0])]
 
 #    @profile
     @staticmethod
     def int_decompress(src, src_off, src_len, dst, dst_off, dst_len):
+        """Internal decompression subroutine"""
         ip = src_off
         op = dst_off
         t = src[ip]
@@ -207,7 +213,7 @@ class pydelzo:
                 t += 2
          
                 for ii in xrange(t):
-                	dst[op+ii] = dst[m_pos+ii]
+                    dst[op+ii] = dst[m_pos+ii]
                 op += t
                 m_pos += t
 
