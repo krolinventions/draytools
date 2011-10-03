@@ -42,6 +42,7 @@ class draytools:
 
 	verbose = False
 	modelprint = True
+	force_smart_guess = True
 
 	class fs:
 		"""Draytek filesystem utilities"""
@@ -216,7 +217,7 @@ class draytools:
 		key = 0
 		for i in xrange(256):
 			rdata = draytools.decrypt(data, i)
-			if draytools.add_guess(rdata) == draytools.CFG_LZO:
+			if draytools.smart_guess(rdata) == draytools.CFG_LZO:
 				key = i
 				break
 		if draytools.verbose:
@@ -234,7 +235,7 @@ class draytools:
 		ckey = draytools.make_key(modelstr)
 		rdata = draytools.decrypt(data[0x100:], ckey)
 		# if the decrypted data does not look good, bruteforce
-		if draytools.add_guess(rdata) != draytools.CFG_LZO:
+		if draytools.smart_guess(rdata) != draytools.CFG_LZO:
 			rdata = draytools.brute_cfg(data[0x100:])
 		elif draytools.verbose:
 			print 'Used key :\t[0x%02X]' % ckey
@@ -253,7 +254,7 @@ class draytools:
 		return ord(data[0x2D])
 
 	@staticmethod
-	def add_guess(data):
+	def smart_guess(data):
 		"""Guess is the cfg block compressed or not"""
 		# Uncompressed block is large and has low entropy
 		if draytools.entropy(data) < 1.0 or len(data) > 0x10000:
@@ -266,7 +267,10 @@ class draytools:
 	@staticmethod
 	def de_cfg(data):
 		"""Get raw config data from raw /compressed/encrypted & comressed"""
-		g = draytools.guess(data) 
+		if draytools.force_smart_guess:
+			g = draytools.smart_guess(data)
+		else:
+			g = draytools.guess(data)
 		if g == draytools.CFG_RAW:
 			if draytools.verbose:
 				print 'File is  :\tnot compressed, not encrypted'
