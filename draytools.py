@@ -32,7 +32,7 @@ from pydelzo import pydelzo, LZO_ERROR
 
 class draytools:
 	"""DrayTek Vigor password recovery, config & firmware tools"""
-	__version__ = "v0.31"
+	__version__ = "v0.32"
 	copyright = \
 	"draytools Copyright (C) 2011 AMMOnium <ammonium at mail dot ru>"
 	
