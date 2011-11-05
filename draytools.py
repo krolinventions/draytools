@@ -717,6 +717,7 @@ To extract firmware and filesystem contents
 		rr = xr.match(options.mac)
 		if rr:
 			xmac = unhexlify(re.sub('[:\-]', '', options.mac))
+			print 'Username  :\t' + "admin"
 			print 'Master key:\t' + draytools.spkeygen(xmac)
 		else:
 			print '[ERR]:\tPlease enter a valid MAC address, e.g '\
