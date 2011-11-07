@@ -159,7 +159,9 @@ Options:
     Some other useful stuff
 
     -m MAC, --master-key=MAC
-                        Generate FTP master key for given router MAC address
+                        Generate FTP master key for given router MAC address.
+                        To login to FTP enter "admin" as username and
+                        generated master key as password
 
 Examples:
 

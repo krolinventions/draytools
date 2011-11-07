@@ -32,7 +32,7 @@ from pydelzo import pydelzo, LZO_ERROR
 
 class draytools:
 	"""DrayTek Vigor password recovery, config & firmware tools"""
-	__version__ = "v0.32"
+	__version__ = "v0.33"
 	copyright = \
 	"draytools Copyright (C) 2011 AMMOnium <ammonium at mail dot ru>"
 	
@@ -520,7 +520,9 @@ To extract firmware and filesystem contents
 # miscellaneous option group for cmdline option parser 
 	mgroup.add_option('-m', '--master-key',
 		action="store", dest="mac",
-		help="Generate FTP master key for given router MAC address", 
+		help="Generate FTP master key for given router MAC address. "
+		"To login to FTP enter \"admin\" as username and generated "
+		"master key as password", 
 		default=None)
 
 
