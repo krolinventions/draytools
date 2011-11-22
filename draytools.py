@@ -32,7 +32,7 @@ from pydelzo import pydelzo, LZO_ERROR
 
 class draytools:
 	"""DrayTek Vigor password recovery, config & firmware tools"""
-	__version__ = "v0.33"
+	__version__ = "v0.4"
 	copyright = \
 	"draytools Copyright (C) 2011 AMMOnium <ammonium at mail dot ru>"
 	
@@ -355,12 +355,18 @@ class draytools:
 		atl = 'kgusnivrjmqftydplczexbohaw'
 		res = ['\x00'] * 8
 		st = [0] * 8
-		# compute 31*(31*(31*(31*(31*m0+m1)+m2)+m3)+m4)+m5
+		# compute 31*(31*(31*(31*(31*m0+m1)+m2)+m3)+m4)+m5, sign-extend mac bytes
 		a3 = 0
 		for i in mac:
-			a3 *= 31
-			a3 += ord(i)
-		a3 &= 0xFFFFFFFF
+			v1 = a3 << 5
+			v1 &= 0xFFFFFFFF
+			a0 = ord(i)
+			if a0 >= 0x80:
+				a0 |= 0xFFFFFF00
+			v1 -= a3
+			v1 &= 0xFFFFFFFF
+			a3 = v1 + a0
+			a3 &= 0xFFFFFFFF
 		# Divide by 13 :) Old assembly trick, I leave it here
 		# 0x4EC4EC4F is a multiplicative inverse for 13
 		ck = 0x4EC4EC4F * a3

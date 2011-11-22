@@ -1,17 +1,23 @@
+0.4  - 22.11.2011
+Important master key bugfixes (50% keys were wrong before :) )
+
+0.33 - 07.11.2011 
+minor bugfixes
+
 0.32 - 03.10.2011
 forced smart cfg file type detection
 
 0.31 - 02.10.2011
 bugfixes
 
-0.3 - 01.10.2011
+0.3  - 01.10.2011
 Master key generation added
 
-0.2 - 21.08.2011
+0.2  - 21.08.2011
 First public release
 
-0.1 - 27.06.2011
+0.1  - 27.06.2011
 It's working!
 
-0.0 - XX.06.2011
+0.0  - XX.06.2011
 Decrypted config file by hand
