@@ -32,7 +32,7 @@ from pydelzo import pydelzo, LZO_ERROR
 
 class draytools:
 	"""DrayTek Vigor password recovery, config & firmware tools"""
-	__version__ = "v0.4"
+	__version__ = "v0.41"
 	copyright = \
 	"draytools Copyright (C) 2011 AMMOnium <ammonium at mail dot ru>"
 	
@@ -244,8 +244,8 @@ class draytools:
 	@staticmethod
 	def get_credentials(data):
 		"""Extract admin credentials from config"""
-		login = data[0x100+0x28:0x100+0x40].replace('\x00','')
-		password = data[0x100+0x40:0x100+0x58].replace('\x00','')
+		login = data[0x100+0x28:0x100+0x40].split('\x00')[0]
+		password = data[0x100+0x40:0x100+0x58].split('\x00')[0]
 		return [login, password]
 
 	@staticmethod

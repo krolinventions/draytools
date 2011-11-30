@@ -1,3 +1,6 @@
+0.41 - 30.11.2011
+Fixed some null-terminated credentials (rare occurrence)
+
 0.4  - 22.11.2011
 Important master key bugfixes (50% keys were wrong before :) )
 
