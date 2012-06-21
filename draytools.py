@@ -225,20 +225,15 @@ class draytools:
 		return rdata
 
 	@staticmethod
-	def decrypt_cfg(data):
+	def decrypt_cfg(data, bruteforce_key=None):
 		"""Decrypt config, bruteforce if default key fails"""
 		modelstr = "V" + format(unpack(">H", 
 			draytools.get_modelid(data))[0],"04X")
 		if draytools.verbose:
 			print 'Model is :\t' + modelstr
 			draytools.modelprint = False
-		ckey = draytools.make_key(modelstr)
+		ckey = bruteforce_key or draytools.make_key(modelstr)
 		rdata = draytools.decrypt(data[0x100:], ckey)
-		# if the decrypted data does not look good, bruteforce
-		if draytools.smart_guess(rdata) != draytools.CFG_LZO:
-			rdata = draytools.brute_cfg(data[0x100:])
-		elif draytools.verbose:
-			print 'Used key :\t[0x%02X]' % ckey
 		return data[:0x2D] + '\x01' + data[0x2E:0x100] + rdata
 
 	@staticmethod
@@ -282,7 +277,14 @@ class draytools:
 		elif g == draytools.CFG_ENC:
 			if draytools.verbose:
 				print 'File is  :\tcompressed, encrypted'
-			return g, draytools.decompress_cfg(draytools.decrypt_cfg(data))
+			result = None
+			for i in xrange(256):
+				try:
+					result = draytools.decompress_cfg(draytools.decrypt_cfg(data, i))
+					break
+				except:
+					pass
+			return g, result
 
 	@staticmethod
 	def decompress_firmware(data):
