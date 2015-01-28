@@ -250,6 +250,263 @@ class draytools:
         return [login, password]
 
     @staticmethod
+    def get_params(data):
+        """Extract parameters from config"""
+        desc = []
+        packstring = ">296s"# ??? do 296
+        desc.append("???")
+
+        packstring += "24s"# login do 320 
+        desc.append("login")
+
+        packstring += "24s"# password 344
+        desc.append("System Maintenance >> Administrator Password Setup >> Administrator Password")
+
+        packstring += "24s"# Router Name 368
+        desc.append("System Maintenance >> Management >> Management Setup >> Roouter Name")
+
+        packstring += "160s"# ??? 598
+        desc.append("???")
+
+        packstring += 'i'# System Maintenance >> Management >> Management Setup >> Management Port Setup >> Telnet Port
+        desc.append("System Maintenance >> Management >> Management Setup >> Management Port Setup >> Telnet Port")
+
+        packstring += 'i'# System Maintenance >> Management >> Management Setup >> Management Port Setup >> HTTP Port
+        desc.append("System Maintenance >> Management >> Management Setup >> Management Port Setup >> HTTP Port")
+
+        packstring += 'i'# System Maintenance >> Management >> Management Setup >> Management Port Setup >> FTP Port
+        desc.append("System Maintenance >> Management >> Management Setup >> Management Port Setup >> FTP Port")
+
+        packstring += 'i'# System Maintenance >> Management >> Management Setup >> Management Port Setup >> HTTPS Port
+        desc.append("System Maintenance >> Management >> Management Setup >> Management Port Setup >> HTTPS Port")
+
+        packstring += "32s"
+        desc.append("???")
+
+        for i in range(20):
+            packstring += "H" # NAT >> Port Redirection >> Index No. %02d >> Public Port
+            desc.append("NAT >> Port Redirection >> Index No. %02d >> Public Port"% (i+1))
+            packstring += "2s" # ????
+            desc.append("???")
+            packstring += "16s"# NAT >> Port Redirection >> Index No. %02d >> Private IP
+            desc.append("NAT >> Port Redirection >> Index No. %02d >> Private IP"% (i+1))
+            packstring += "H" # NAT >> Port Redirection >> Index No. %02d >> Private Port
+            desc.append("NAT >> Port Redirection >> Index No. %02d >> Private Port"% (i+1))
+            packstring += "24s"# NAT >> Port Redirection >> Index No. %02d >> Service Name
+            desc.append("NAT >> Port Redirection >> Index No. %02d >> Service Name"% (i+1))
+            packstring += "4s" # ????
+            desc.append("???")
+
+        packstring += "2344s"# ??? 392
+        desc.append("???")
+
+        packstring += "24s"# System Maintenance >> Management >> Management Setup >> SNMP Setup >> Trap Community 3944
+        desc.append("System Maintenance >> Management >> Management Setup >> SNMP Setup >> Trap Community")
+
+        packstring += "24s"# System Maintenance >> Management >> Management Setup >> SNMP Setup >> Get Community 3968
+        desc.append("System Maintenance >> Management >> Management Setup >> SNMP Setup >> Get Community")
+
+        packstring += "24s"# System Maintenance >> Management >> Management Setup >> SNMP Setup >> Set Community 3992
+        desc.append("System Maintenance >> Management >> Management Setup >> SNMP Setup >> Set Community")
+
+        packstring += "88s"# ??? 408
+        desc.append("???")
+
+        packstring += "32s"# System Maintenance >> Time Date >> Time Setup >> Server IP Address 4112
+        desc.append("System Maintenance >> Time Date >> Time Setup >> Server IP Address")
+
+        packstring += "11928s"# ??? 16040
+        desc.append("???")
+
+        for i in range(2):
+            packstring += "24s"# Interface WAN %d Display Name
+            desc.append("Interface WAN %d Display Name"% (i+1))
+            packstring += "600s"# ???
+            desc.append("???")
+
+        packstring += "19716s"# ??? 37004 
+        desc.append("???")
+
+        for i in range(12):
+            packstring += "24s"# Filter Set %02d Comment
+            desc.append("Filter Set %02d Comment"% (i+1))
+            packstring += "32s"# ???
+            desc.append("???")
+            for j in range(1,8):
+                packstring += "24s"# Filter Set %02d Rule %02d Comment
+                desc.append("Filter Set %02d Rule %02d Comment"% (i+1,j))
+                packstring += "120s"# ???
+                desc.append("???") # 49772
+
+        packstring += "200s"# ???
+        desc.append("???") # 49972
+
+        for i in range(192):
+            packstring += "16s"# Object Setting >> IP Object >> Profile Index : %03d >> Name
+            desc.append("Object Setting >> IP Object >> Profile Index : %03d >> Name"% (i+1))
+            packstring += "20s"# ??? 
+            desc.append("???") # 56884
+
+
+
+        for i in range(20):
+            packstring += "16s"# Object Setting >> IP Group >> Profile Index : %02d >> Name
+            desc.append("Object Setting >> IP Group >> Profile Index : %02d >> Name"% (i+1))
+            packstring += "16s"# ??? 
+            desc.append("???") # 57524
+
+        packstring += "384s"# ??? 57908
+        desc.append("???")
+
+        for i in range(96):
+            packstring += "16s"# "Object Setting >> Service Type Object >> Profile Index : %02d >> Name
+            desc.append("Object Setting >> Service Type Object >> Profile Index : %02d >> Name"% (i+1))
+            packstring += "12s"# ??? 
+            desc.append("???") # 60596
+
+        packstring += "23588s"# ??? 84184
+        desc.append("???")
+
+        packstring += "256s"# CSM >> URL Content Filter Profile >> Administration Message 84440
+        desc.append("CSM >> URL Content Filter Profile >> Administration Message")
+
+        packstring += "12s"# ??? 84452
+        desc.append("???")
+
+        for i in range(8):
+            packstring += "16s"# FIX: CSM >> URL Content Filter Profile >> Profile Index : %01d >> Profile Name 84580
+            desc.append("CSM >> URL Content Filter Profile >> Profile Index : %01d >> Profile Name"% (i+1))
+            packstring += "108s"# ??? 
+            desc.append("???");
+
+        for i in range(8):
+            packstring += "8s"# [FIX] Object Setting >> File Extension Object >> Profile Index : %0d >> Profile Name
+            desc.append("Object Setting >> File Extension Object >> Profile Index : %0d >> Profile Name"% (i+1))
+            packstring += "160s"# ??? 
+            desc.append("???")
+
+        packstring += "4s"
+        desc.append("???")
+
+        packstring += "256s"# CSM >> Web Content Filter Profile >> Administration Message 87048
+        desc.append("CSM >> Web Content Filter Profile >> Administration Message")
+
+        packstring += "1292s"# ??? 88340
+        desc.append("???")
+
+        packstring += "256s"# Bandwidth Management >> Session Limit >> Administration Message 88596  
+        desc.append("Bandwidth Management >> Session Limit >> Administration Message")
+
+        packstring += "4s"# ??? 88600
+        desc.append("???")
+
+        for i in range(32):
+            packstring += "12s"# LAN >> Bind IP to MAC >> IP Bind List >> Index %02d >> Comment 88984
+            desc.append("LAN >> Bind IP to MAC >> IP Bind List >> Index %02d >> Commen"% (i+1))
+        packstring += "14080s"# ??? 103064 
+        desc.append("???")
+
+        for i in range(3):
+            packstring += "12s"# Bandwidth Management >> Quality of Service >> Class index #%01d >> Name 
+            desc.append("Bandwidth Management >> Quality of Service >> Class index #%01d >> Name"% (i+1))
+            packstring += "1040s"# ???
+            desc.append("???")
+
+        packstring += "4660s"# ??? 110880
+        desc.append("???")
+
+        for i in range(4):
+            packstring += "32s"# Wireless LAN >> General Setup >> General Setting (IEEE 802.11) >> %01d >> SSID
+            desc.append("Wireless LAN >> General Setup >> General Setting (IEEE 802.11) >> %01d >> SSID"% (i+1))
+            packstring += "472s"# ???
+            desc.append("???") # 118296
+            packstring += "64s"# Wireless LAN >> Security Settings >> SSID %01d >> Pre-Shared Key (PSK)
+            desc.append("Wireless LAN >> Security Settings >> SSID %01d >> Pre-Shared Key (PSK)"% (i+1))
+            packstring += "1286s"# ???
+            desc.append("???") # 118296
+
+        #packstring += "59776s"# ??? 164616
+        packstring += "46272s"# ??? 164616
+        desc.append("???")
+
+        for i in range(32): 
+            packstring += "48s"# VPN and Remote Access >> LAN to LAN >> Profile Index : %02d >> Dial-In Settings >> Peer ID 
+            desc.append("VPN and Remote Access >> LAN to LAN >> Profile Index : %02d >> Dial-In Settings >> Peer ID"% (i+1))
+        
+        packstring += "11968s"# ??? 178072
+        desc.append("???")
+
+        for i in range(32):
+            packstring += "10s"# VPN and Remote Access >> LAN to LAN >> Profile Index : %02d >> Common Settings >> Profile Name
+            desc.append("VPN and Remote Access >> LAN to LAN >> Profile Index : %02d >> Common Settings >> Profile Name"% (i+1))
+            packstring += "10s"# ???
+            desc.append("???")
+            packstring += "12s"# VPN and Remote Access >> LAN to LAN >> Profile Index : %02d >> Dial-In Settings >> Username
+            desc.append("VPN and Remote Access >> LAN to LAN >> Profile Index : %02d >> Dial-In Settings >> Username"% (i+1))
+            packstring += "60s"# ???
+            desc.append("???")
+            packstring += "50s"# VPN and Remote Access >> LAN to LAN >> Profile Index : %02d >> Dial-Out Settings >> Username
+            desc.append("VPN and Remote Access >> LAN to LAN >> Profile Index : %02d >> Dial-Out Settings >> Username"% (i+1))
+            packstring += "14s"# ???
+            desc.append("???")
+            packstring += "16s"# VPN and Remote Access >> LAN to LAN >> Profile Index : %02d >> Dial-Out Settings >> Password
+            desc.append("VPN and Remote Access >> LAN to LAN >> Profile Index : %02d >> Dial-Out Settings >> Password"% (i+1))
+            packstring += "44s"# ???
+            desc.append("???")
+
+        packstring += "81476s"# ??? 
+        desc.append("???")
+
+        for i in range(200):
+            packstring += "16s"# Object Setting >> Keyword Object >> Profile Index : %03d >> Name
+            desc.append("Object Setting >> Keyword Object >> Profile Index : %03d >> Name"% (i+1))
+            packstring += "64s"# Object Setting >> Keyword Object >> Profile Index : %03d >> Contents
+            desc.append("Object Setting >> Keyword Object >> Profile Index : %03d >> Contents"% (i+1))
+            packstring += "64s"# Object Setting >> Keyword Object >> Profile Index : %03d >> Contents
+            desc.append("???")
+
+        for i in range(32):
+            packstring += "16s"# Object Setting >> Keyword Group Setup >> Profile Index : %03d >> Name
+            desc.append("Object Setting >> Keyword Object >> Profile Index : %03d >> Name"% (i+1))
+            packstring += "48s"# ???
+            desc.append("???")
+
+        packstring += "1920s"# 299228
+        desc.append("???")
+
+        for i in range(32):
+            packstring += "16s"# CSM >> APP Enforcement Profile >> Profile Index : %0d >> Profile Name
+            desc.append("CSM >> APP Enforcement Profile >> Profile Index : %02d >> Profile Name"% (i+1))
+            packstring += "160s"# ???
+            desc.append("???") 
+
+        packstring += "27916s"# 332776 
+        desc.append("???")
+
+        packstring += "16s"# USB General Settings Workgroup Name 332792
+        desc.append("USB General Settings Workgroup Name")
+
+        packstring += "31712s"# ??? 364504 
+        desc.append("???")
+
+        packstring += "32s"# "System Maintenance >> Login Page Greeting >> Login Page Title 364536
+        desc.append("System Maintenance >> Login Page Greeting >> Login Page Title")
+
+        packstring += "384s"# ??? 364920 
+        desc.append("???")
+
+        packstring += "512s"# "System Maintenance >> Login Page Greeting >> Login Page Title 365432
+        desc.append("System Maintenance >> Login Page Greeting >> Login Page Title")
+
+        variables = list(unpack(packstring, data[:365432]))
+        for i in range(0,len(variables)):
+            if type(variables[i]) == type(str()):
+                variables[i]=variables[i].split('\x00')[0]
+        dict_list = zip (desc, variables) 
+        
+        return dict(dict_list)
+
+    @staticmethod
     def guess(data):
         """Return CFG type - raw(0), compressed(1), encrypted(2)"""
         return ord(data[0x2D])
@@ -504,6 +761,12 @@ To extract firmware and filesystem contents
         help="Retrieve admin login and password from config file", 
         default=False)
 
+    cfggroup.add_option('-e', '--extract',
+        action="store_true", dest="text",
+        help="Extract text config from config file",
+        default=False)
+
+
 # firmware/fs option group for cmdline option parser 
 
     fwgroup.add_option('-f', '--firmware',
@@ -656,6 +919,22 @@ To extract firmware and filesystem contents
         print "Password :\t" + (creds[1] == "" and "admin" or creds[1])
         sys.exit(0)
 
+# Command: extract parameters from config file
+    if options.text and \
+    not (True in [options.firmware, options.fw_all, options.fs]):
+        g = -1
+        try:
+            g, outdata = draytools.de_cfg(indata)
+        except LZO_ERROR:
+            print '[ERR]:\tInput file corrupted or not supported'
+            sys.exit(3)
+        params = draytools.get_params(outdata)
+        for k,v in sorted(params.iteritems()):
+            if v:      
+                print "%s => %s" % (k, v)
+
+        sys.exit(0)
+
 # Command: extract firmware
     if options.firmware:
         try:
@@ -732,3 +1011,4 @@ To extract firmware and filesystem contents
             print '[ERR]:\tPlease enter a valid MAC address, e.g '\
             '00-11-22-33-44-55 or 00:DE:AD:BE:EF:00 or 1337babecafe'
 # EOF
+
