@@ -281,21 +281,23 @@ class draytools:
         desc.append("System Maintenance >> Management >> Management Setup >> Management Port Setup >> HTTPS Port")
 
         packstring += "32s"
-        desc.append("???")
+        desc.append("???") # 576
 
         for i in range(20):
             packstring += "H" # NAT >> Port Redirection >> Index No. %02d >> Public Port
             desc.append("NAT >> Port Redirection >> Index No. %02d >> Public Port"% (i+1))
-            packstring += "2s" # ????
-            desc.append("???")
+            packstring += "H" # NAT >> Port Redirection >> Index No. %02d >> Public Port
+            desc.append("NAT >> Port Redirection >> Index No. %02d >> Protocol" % (i+1))
             packstring += "16s"# NAT >> Port Redirection >> Index No. %02d >> Private IP
             desc.append("NAT >> Port Redirection >> Index No. %02d >> Private IP"% (i+1))
             packstring += "H" # NAT >> Port Redirection >> Index No. %02d >> Private Port
             desc.append("NAT >> Port Redirection >> Index No. %02d >> Private Port"% (i+1))
             packstring += "24s"# NAT >> Port Redirection >> Index No. %02d >> Service Name
             desc.append("NAT >> Port Redirection >> Index No. %02d >> Service Name"% (i+1))
-            packstring += "4s" # ????
-            desc.append("???")
+            packstring += "H" # NAT >> Port Redirection >> Index No. %02d >> Public Port Count
+            desc.append("NAT >> Port Redirection >> Index No. %02d >> Public Port Count" % (i+1))
+            packstring += "H" # NAT >> Port Redirection >> Index No. %02d >> WAN IP
+            desc.append("NAT >> Port Redirection >> Index No. %02d >> WAN IP" % (i+1))
 
         packstring += "2344s"# ??? 392
         desc.append("???")
@@ -321,10 +323,48 @@ class draytools:
         for i in range(2):
             packstring += "24s"# Interface WAN %d Display Name
             desc.append("Interface WAN %d Display Name"% (i+1))
-            packstring += "600s"# ???
+            packstring += "236s"# ???
+            desc.append("???")
+            for j in range (4):
+                packstring += "B"# WAN >> Internet Access >> WAN %d >> Static or Dynamic IP >> WAN IP Network Settings >> Gateway IP Address %d
+                desc.append("WAN >> Internet Access >> WAN %d >> Static or Dynamic IP >> WAN IP Network Settings >> Gateway IP Address %d "% (i+1,j+1))
+            packstring += "16s"# ???
+            desc.append("???")
+            for j in range (4):
+                packstring += "B"# WAN >> Internet Access >> WAN %d >> Static or Dynamic IP >> WAN IP Network Settings >> Gateway IP Address %d
+                desc.append("WAN >> Internet Access >> WAN %d >> Static or Dynamic IP >> WAN IP Network Settings >> IP Address %d "% (i+1,j+1))
+            for j in range (4):
+                packstring += "B"# WAN >> Internet Access >> WAN %d >> Static or Dynamic IP >> WAN IP Network Settings >> Gateway IP Address %d
+                desc.append("WAN >> Internet Access >> WAN %d >> Static or Dynamic IP >> WAN IP Network Settings >> Subnet Mask %d "% (i+1,j+1))
+            packstring += "192s"# ???
+            desc.append("???")
+            for j in range (4):
+                packstring += "B"# WAN >> Internet Access >> WAN %d >> Static or Dynamic IP >> DNS Server IP Address >> Primary IP Address
+                desc.append("WAN >> Internet Access >> WAN %d >> Static or Dynamic IP >> DNS Server IP Address >> Primary IP Address %d "% (i+1,j+1))
+            for j in range (4):
+                packstring += "B"# WAN >> Internet Access >> WAN %d >> Static or Dynamic IP >> DNS Server IP Address >> Secondary IP Address
+                desc.append("WAN >> Internet Access >> WAN %d >> Static or Dynamic IP >> DNS Server IP Address >> Secondary IP Address %d "% (i+1,j+1))
+            packstring += "144s"# ???
             desc.append("???")
 
-        packstring += "19716s"# ??? 37004 
+        packstring += "11224s"# ??? 28528 
+        desc.append("???")
+
+        for i in range(7):
+            for j in range(4):
+                packstring += "B"# WAN >> Internet Access >> WAN 2 >> Static or Dynamic IP >> WAN IP Network Settings >> WAN IP Alias %d 
+                desc.append("WAN >> Internet Access >> WAN 2 >> Static or Dynamic IP >> WAN IP Network Settings >> WAN IP Alias %d %d"% (i+1,j+1))
+
+        packstring += "6516s"# ??? 35072 
+        desc.append("???")
+        for i in range(10):
+            for j in range(6):
+                packstring += "B"#  Bind IP to MAC >> IP Bind List >> Mac address %d 
+                desc.append("LAN >> Bind IP to MAC >> IP Bind List >> Mac address %d %d" % (i+1,j+1))
+         
+#        variables = list(unpack(packstring, data[:365432]))
+        
+        packstring += "1872s"# ??? 37004 
         desc.append("???")
 
         for i in range(12):
@@ -364,7 +404,13 @@ class draytools:
             packstring += "12s"# ??? 
             desc.append("???") # 60596
 
-        packstring += "23588s"# ??? 84184
+        for i in range(32):
+            packstring += "16s"# "Object Setting >> Service Type Group >> Profile Index : %02d >> Name
+            desc.append("Object Setting >> Service Type Group >> Profile Index : %02d >> Name"% (i+1))
+            packstring += "16s"# ??? 
+            desc.append("???") # 
+
+        packstring += "22564s"# ??? 84184
         desc.append("???")
 
         packstring += "256s"# CSM >> URL Content Filter Profile >> Administration Message 84440
