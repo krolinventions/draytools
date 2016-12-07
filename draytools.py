@@ -322,9 +322,20 @@ class draytools:
 
         for i in range(2):
             packstring += "24s"# Interface WAN %d Display Name
-            desc.append("Interface WAN %d Display Name"% (i+1))
-            packstring += "236s"# ???
+            desc.append("WAN >> General Setup >> WAN %d >> Display Name"% (i+1))
+
+            packstring += "64s" # jeszcze nie wiem
             desc.append("???")
+
+            packstring += "64s"# ???
+            desc.append("WAN >> Internet Access >> WAN %d >> PPPoE/PPPoA >> ISP Access Setup >> Username" % (i+1))
+
+            packstring += "64s"# ???
+            desc.append("WAN >> Internet Access >> WAN %d >> PPPoE/PPPoA >> ISP Access Setup >> Password" % (i+1))
+
+            packstring += "44s"# ???
+            desc.append("???")
+
             for j in range (4):
                 packstring += "B"# WAN >> Internet Access >> WAN %d >> Static or Dynamic IP >> WAN IP Network Settings >> Gateway IP Address %d
                 desc.append("WAN >> Internet Access >> WAN %d >> Static or Dynamic IP >> WAN IP Network Settings >> Gateway IP Address %d "% (i+1,j+1))
